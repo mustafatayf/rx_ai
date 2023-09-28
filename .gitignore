@@ -1,0 +1,19 @@
+
+# pycharm files
+.idea/
+__pycache__/
+
+# large files
+data/
+
+# model files
+models/
+
+# local projects
+dl_ofdm/
+
+# others
+*.out
+*.bak
+*.tmp
+
