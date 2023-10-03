@@ -17,3 +17,5 @@ dl_ofdm/
 *.bak
 *.tmp
 
+# local
+i.*
