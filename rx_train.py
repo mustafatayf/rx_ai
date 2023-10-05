@@ -21,6 +21,7 @@ if model == '':
     model = eval(MODEL + '_' + IQ)(batch_size=batch_size)
     # model = gru_qpsk(batch_size=batch_size)
 
+
 print(model.summary())
 confs = {
     'loss': model.loss,
@@ -44,6 +45,7 @@ if 'lstm' in model.name or 'gru' in model.name:
     # padding for initial and ending values
     Xp = np.append(np.zeros(isi), X_i, axis=0)
     Xp = np.append(Xp, np.zeros(isi), axis=0)
+
     assert Xp.size == X_i.size + 2 * isi, 'error'
 
     ls_x = np.empty(shape=(X_i.size, 2 * isi + 1))

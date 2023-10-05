@@ -32,15 +32,16 @@ def get_data(name, rec=True, NoD=int(1e6)):  # noqa
         y_one_hot = np.zeros(shape=(y.size, y.max()+1), dtype=np.int8)
         y_one_hot[np.arange(y.size), y] = 1
 
-        # return x, y_one_hot.astype(np.float16)
         return x, y_one_hot
 
 
 def acc_data(tau=0.5):
     """ accumulate data """
 
+    raise NotImplementedError
 
     return x, y
+
 
 def gen_data(n):
     # n 'number of data'
