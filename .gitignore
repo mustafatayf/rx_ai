@@ -9,6 +9,9 @@ data/
 # model files
 models/
 
+# Weights and Biases folder
+wandb/
+
 # local projects
 dl_ofdm/
 

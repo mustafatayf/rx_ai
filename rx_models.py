@@ -143,7 +143,7 @@ def save_mdl(model):
     if not os.path.isdir('models'):
         os.mkdir('models')
     save_model(model, filepath='models/' + uid, overwrite=True, save_format='tf')
-
+    print('{name} is saved to models/ folder..'.format(name=uid))
 
 # references
 
