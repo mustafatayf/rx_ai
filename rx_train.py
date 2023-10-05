@@ -1,7 +1,7 @@
 import wandb
 import numpy as np
 from wandb.keras import WandbMetricsLogger, WandbModelCheckpoint
-from rx_utils import get_data, add_awgn, show_train, check_data
+from rx_utils import get_data, show_train, check_data
 from rx_models import dense_nn_bpsk, dense_nn_qpsk, dense_nn_deep, lstm_bpsk, gru_bpsk, gru_qpsk, save_mdl
 
 TAU = 0.50  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
@@ -42,6 +42,7 @@ for k, v in confs.items():
 # data control
 # check_data(rx_data=X_i, ref_bit=y_i, modulation=IQ)
 
+# TODO make time series generation as function
 # single to time series data
 if 'lstm' in model.name or 'gru' in model.name:
     isi = 7

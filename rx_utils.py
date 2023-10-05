@@ -39,14 +39,7 @@ def acc_data(tau=0.5):
     """ accumulate data """
 
     raise NotImplementedError
-
-    return x, y
-
-
-def gen_data(n):
-    # n 'number of data'
-    # return data
-    raise NotImplementedError
+    # return x, y
 
 
 def check_data(rx_data, ref_bit, modulation='bpsk'):
@@ -81,24 +74,6 @@ def check_data(rx_data, ref_bit, modulation='bpsk'):
         raise NotImplementedError
 
     return nof_error
-
-
-def add_awgn(inputs, snr=10):
-
-    assert len(inputs.shape) == 1, 'Only 1 dimensional data supported!'
-    n = len(inputs)
-    # SNR = 10*log10(Eb/No)
-    # Eb/No = 10 ^(SNR/10)
-    # EB = 1 for BPSK
-    n0 = 10 ** (-snr/10)
-    # noise = np.sqrt(N0/2)*(np.randn(n, 1) + np.randn(n, 1))
-    noise = np.multiply(np.sqrt(n0/2), np.random.standard_normal(n))  # standard_normal: (mean=0, stdev=1)
-    output = np.add(inputs, noise)
-
-    # plt.hist(noise, bins=40)
-    # plt.show()
-
-    return output
 
 
 def show_train(history):

@@ -157,6 +157,7 @@ def save_mdl(model, history=None):
         with open(hist_json_file, mode='w') as f:
             hist_df.to_json(f)
 
+
 # references
 
 # Activation functions:
