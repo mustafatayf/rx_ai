@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 from rx_config import *
 # from tensorflow import keras
 from keras import Sequential
@@ -136,7 +137,7 @@ def dense_nn_deep():
     return model
 
 
-def save_mdl(model):
+def save_mdl(model, history=None):
     damga = datetime.utcnow()
     uid = model.name + '_' + damga.strftime('%Y%b%d_%H%M')
     # model.save(''+uid)
@@ -144,6 +145,17 @@ def save_mdl(model):
         os.mkdir('models')
     save_model(model, filepath='models/' + uid, overwrite=True, save_format='tf')
     print('{name} is saved to models/ folder..'.format(name=uid))
+
+    if history:
+        # https://stackoverflow.com/questions/41061457/
+        # keras-how-to-save-the-training-history-attribute-of-the-history-object
+        # convert the history.history dict to a pandas DataFrame:
+        hist_df = pd.DataFrame(history.history)
+
+        # save to json:
+        hist_json_file = 'models/{name}/history.json'.format(name=uid)
+        with open(hist_json_file, mode='w') as f:
+            hist_df.to_json(f)
 
 # references
 

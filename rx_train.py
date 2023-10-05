@@ -95,7 +95,7 @@ history = model.fit(X, y,
                     # callbacks=[WandbMetricsLogger(log_freq=10), WandbModelCheckpoint('models/')]  # WandbCallback()
                     )
 
-save_mdl(model)
+save_mdl(model, history=history)
 # plot train process
 show_train(history)
 
