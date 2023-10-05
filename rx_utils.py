@@ -36,6 +36,12 @@ def get_data(name, rec=True, NoD=int(1e6)):  # noqa
         return x, y_one_hot
 
 
+def acc_data(tau=0.5):
+    """ accumulate data """
+
+
+    return x, y
+
 def gen_data(n):
     # n 'number of data'
     # return data

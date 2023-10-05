@@ -1,19 +1,26 @@
 import numpy as np
 
 from rx_utils import get_data, add_awgn, show_train, check_data
-from rx_models import dense_nn_bpsk, dense_nn_qpsk, dense_nn_deep, lstm_bpsk, gru_bpsk, save_mdl
+from rx_models import dense_nn_bpsk, dense_nn_qpsk, dense_nn_deep, lstm_bpsk, gru_bpsk, gru_qpsk, save_mdl
+
+TAU = 0.7  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
+SNR = 10  # 0, 1, 2, ..., 10, nonoise  # noqa
+IQ = 'bpsk'  # bpsk, qpsk   # noqa
+
+MODEL = 'gru'  # 'dense', 'lstm', 'gru'
+model = ''
 
 batch_size = 1024
 NoD = 3 * 10 ** 5
-MODULATION = 'bpsk'  # bpsk, qpsk
 
-X_i, y_i = get_data('data_N1e6_bpsk/tau0.50_snr7_bpsk', NoD=NoD)  # tauD.FF_snrDD_bpsk, tauD.FF_nonoise_bpsk
-# X, y = get_data(name='data_N1e5_qpsk/tau0.70_snr10_qpsk', NoD=NoD)  # tauD.FF_snrDD_bpsk, tauD.FF_nonoise_bpsk
-# model = dense_nn_bpsk()
-# model = dense_nn_deep()
-# model = dense_nn_qpsk()
-# model = lstm_bpsk(batch_size=batch_size)
-model = gru_bpsk(batch_size=batch_size)
+# Load the training data
+X_i, y_i = get_data(name='data_{iq}/tau{tau}_{snr}_{iq}'.format(iq=IQ, tau=TAU, snr=SNR), NoD=NoD)
+
+# call the model if the model is not initialized yet
+if model == '':
+    model = eval(MODEL + '_' + IQ)(batch_size=batch_size)
+    # model = gru_qpsk(batch_size=batch_size)
+
 print(model.summary())
 confs = {
     'loss': model.loss,
@@ -24,32 +31,34 @@ confs = {
 for k, v in confs.items():
     print(k, v)
 
+# DATA pre-processing
 
 # Xs = add_awgn(y*2-1, snr=10)
 
 # data control
-# check_data(rx_data=X, ref_bit=y, modulation='bpsk')
-# check_data(rx_data=X, ref_bit=y, modulation='qpsk')
+# check_data(rx_data=X_i, ref_bit=y_i, modulation=IQ)
 
+# single to time series data
 if 'lstm' in model.name or 'gru' in model.name:
     isi = 7
     # padding for initial and ending values
     Xp = np.append(np.zeros(isi), X_i, axis=0)
     Xp = np.append(Xp, np.zeros(isi), axis=0)
-    assert Xp.size == X_i.size + 2*isi, 'error'
+    assert Xp.size == X_i.size + 2 * isi, 'error'
 
-    ls_x = np.empty(shape=(X_i.size, 2*isi+1))
+    ls_x = np.empty(shape=(X_i.size, 2 * isi + 1))
     for i in range(X_i.size):
-        ls_x[i, :] = Xp[i:i+2*isi+1]
+        ls_x[i, :] = Xp[i:i + 2 * isi + 1]
 
     # X = np.reshape(ls_x, (ls_x.shape[0], ls_x.shape[1], 1))
     X = ls_x
 else:
     X = X_i
+
+# update label type to float for evaluating performance metrics
 y = y_i.astype(np.float16)
 
-
-# https://wandb.ai/ayush-thakur/dl-question-bank/reports/LSTM-RNN-in-Keras-Examples-of-One-to-Many-Many-to-One-Many-to-Many---VmlldzoyMDIzOTM
+# Weight and Biases integration
 # wandb.init(entity='..-..', project='dl-..-..')
 # tf.keras.backend.clear_session()
 history = model.fit(X, y, validation_split=0.1, epochs=20, batch_size=batch_size)  # callbacks=[WandbCallback()]
@@ -61,5 +70,8 @@ show_train(history)
 # y_pred = model.predict(X[:10, :])
 # y_true = y[:10, :]
 
-# asd.predict([1.2, -3.4, 5.4])
+
+# references
+
+# https://wandb.ai/ayush-thakur/dl-question-bank/reports/LSTM-RNN-in-Keras-Examples-of-One-to-Many-Many-to-One-Many-to-Many---VmlldzoyMDIzOTM
 

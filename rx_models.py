@@ -86,17 +86,33 @@ def gru_bpsk(isi=7, batch_size=32):
     return model
 
 
+def gru_qpsk(isi=7, batch_size=32):
+    # (n_samples, time_steps, features)
+
+    model = Sequential()
+    model._name = 'gru_qpsk'
+
+    model.add(GRU(32,  input_shape=(2*isi+1, 2)))
+    model.add(Dropout(rate=0.2))
+    # model.add(Dense(8, activation='relu'))
+    model.add(Dense(4, activation=tf.keras.activations.hard_sigmoid))
+
+    # model.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer=tf.keras.optimizers.Nadam(),
+                  loss='categorical_crossentropy',
+                  metrics=[BinaryAccuracy(), F1Score()])
+    # model.summary()
+
+    return model
+
+
 def dense_nn_qpsk():
     model = Sequential()
     model._name = 'dense_nn_qpsk'
     model.add(Dense(4, input_shape=(2,), activation='linear'))  # input shape(2,N) : (real, imag)
     # model.add(Dense(8, activation='linear'))
     model.add(Dense(4, activation=tf.keras.activations.hard_sigmoid))
-    # https://www.tensorflow.org/api_docs/python/tf/keras/activations/hard_sigmoid
-    # Hard sigmoid
-    # if x < -2.5: return 0
-    # if x > 2.5: return 1
-    # if -2.5 <= x <= 2.5: return 0.2 * x + 0.5
+
     model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 
     return model
@@ -127,3 +143,18 @@ def save_mdl(model):
     if not os.path.isdir('models'):
         os.mkdir('models')
     save_model(model, filepath='models/' + uid, overwrite=True, save_format='tf')
+
+
+# references
+
+# Activation functions:
+    # Hard sigmoid
+    # https://www.tensorflow.org/api_docs/python/tf/keras/activations/hard_sigmoid
+    # if x < -2.5: return 0
+    # if x > 2.5: return 1
+    # if -2.5 <= x <= 2.5: return 0.2 * x + 0.5
+
+# GRU and LSTM
+    # https://analyticsindiamag.com/lstm-vs-gru-in-recurrent-neural-network-a-comparative-study/
+
+
