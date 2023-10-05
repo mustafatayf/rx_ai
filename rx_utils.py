@@ -66,6 +66,10 @@ def check_data(rx_data, ref_bit, modulation='bpsk'):
         for clm in _df.columns:
             nof_error += (_df[clm] != ref[clm]).sum()
 
+    elif modulation == 'bpsk':
+        # check for data
+        nof_error = sum(abs((rx_data > 0)*1 - ref_bit))
+        print('#data: {NoD}\t#diff: {diff}'.format(NoD=ref_bit.size, diff=nof_error))
     else:
         raise NotImplementedError
 
@@ -91,10 +95,20 @@ def add_awgn(inputs, snr=10):
 
 
 def show_train(history):
-    plt.plot(history.history['accuracy'])
-    plt.plot(history.history['val_accuracy'])
-    plt.title('model accuracy')
-    plt.ylabel('accuracy')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'val'], loc='upper left')
+    n = len(history.history)
+    fig, axs = plt.subplots(nrows=1, ncols=n//2)
+    # TODO : add no validation support
+    for i, metric in enumerate(history.history):
+        # print(metric)
+        if 'val_' in metric:
+            break
+        axs[i].plot(history.history[metric])
+        axs[i].plot(history.history['val_' + metric])
+        axs[i].set_title('model ' + metric)
+        axs[i].set_xlabel('epoch')
+        axs[i].set_ylabel(metric)
+        axs[i].legend(['train', 'val'])
+        # axs[i].legend(['train', 'val'], loc='upper left')
+
     plt.show()
+    # https://matplotlib.org/stable/gallery/subplots_axes_and_figures/figure_title.html
