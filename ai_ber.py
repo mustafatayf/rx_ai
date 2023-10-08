@@ -13,7 +13,7 @@ from keras.models import load_model
 IQ = 'bpsk' # bpsk qpsk # noqa
 sel = 'best'  # best, latest
 path = ''   # manuel path to models/gru_qpsk_2023... # noqa
-
+# gru_bpsk_2023Oct08_0856
 FS = 10
 TAU = 0.8
 SNR = [i for i in range(10+1)]
@@ -36,9 +36,12 @@ snr = 10
 syms, bits = gen_data(n=nos, mod=IQ, seed=initial_seed)
 
 # https://stackoverflow.com/a/25858023
-s_upsampled = np.zeros(int(TAU*FS)*(len(syms)-1)+1, dtype=np.complex_)
+s_upsampled = np.zeros(int(TAU*FS)*len(syms), dtype=np.complex_)
+# 100 bits >>> 100 sembol (BPSK)
+# TAU = 0.8, FS = 10
+#  8*99 + 1 = 793
 s_upsampled[::int(TAU*FS)] = syms
-sPSF = get_h(n=81, fs=FS)
+sPSF = get_h(fs=FS)
 tx_data = np.convolve(sPSF, s_upsampled)
 
 # Channel Modelling
@@ -46,12 +49,13 @@ r = add_awgn(inputs=tx_data, snr=snr)
 
 # RX
 mf = np.convolve(sPSF, r)
-ploc = len(sPSF)  # TODO WRONG SETTING, FIX THIS
-rx_data = mf[::int(TAU*FS)]
+ploc = 81  # TODO make parametric, FIX THIS
+rx_data = mf[ploc-1:-ploc:int(TAU*FS)]
 # plt.plot(np.real(mf[:250]))
 # plt.plot(np.imag(mf[:250]))
 # plt.plot(np.real(rx_data[:250]))
-X_ = rx_data[1:nos+1]
+# X_ = rx_data[1:nos+1]
+X_ = rx_data
 if IQ == 'bpsk':
     X_i = np.real(X_)
 else:

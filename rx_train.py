@@ -4,7 +4,7 @@ from wandb.keras import WandbMetricsLogger, WandbModelCheckpoint
 from rx_utils import get_data, show_train, check_data
 from rx_models import dense_nn_bpsk, dense_nn_qpsk, dense_nn_deep, lstm_bpsk, gru_bpsk, gru_qpsk, save_mdl
 
-TAU = 0.50  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
+TAU = 0.80  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
 SNR = 10  # 0, 1, 2, ..., 10, nonoise  # noqa
 IQ = 'bpsk'  # bpsk, qpsk   # noqa
 
@@ -12,7 +12,7 @@ MODEL = 'gru'  # 'dense', 'lstm', 'gru'
 model = ''
 
 # train parameters
-epochs = 50
+epochs = 1
 batch_size = 1024
 NoD = 10 ** 6
 val_split = 0.1
@@ -85,9 +85,9 @@ configs = dict(
     # learning_rate = 1e-3,
     epochs=epochs
 )
-wandb.init(project='rx_ai',
-           config=configs
-           )
+# wandb.init(project='rx_ai',
+#            config=configs
+#            )
 # tf.keras.backend.clear_session()
 history = model.fit(X, y,
                     validation_split=val_split,
@@ -100,7 +100,7 @@ save_mdl(model, history=history)
 # plot train process
 show_train(history)
 
-wandb.finish()
+# wandb.finish()
 
 # results = model.evaluate(x_test, y_test, batch_size=128)
 # y_pred = model.predict(X[:10, :])

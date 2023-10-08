@@ -5,7 +5,8 @@ from rx_config import *
 from keras import Sequential
 from keras.layers import Dense, LSTM, Dropout, GRU
 from keras.models import save_model, load_model
-from keras.metrics import BinaryAccuracy, F1Score, Precision, Recall
+# from keras.metrics import BinaryAccuracy, F1Score, Precision, Recall
+from keras.metrics import BinaryAccuracy, Precision, Recall
 # from keras.optimizers import SGD, Nadam
 from datetime import datetime
 
@@ -81,7 +82,9 @@ def gru_bpsk(isi=7, batch_size=32):
     # model.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics=['accuracy'])
     model.compile(optimizer=tf.keras.optimizers.Nadam(),
                   loss='mse',
-                  metrics=[BinaryAccuracy(), F1Score()])
+                  # metrics=[BinaryAccuracy(), F1Score()])
+                  metrics=[BinaryAccuracy()])
+
     # model.summary()
 
     return model
