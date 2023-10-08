@@ -4,6 +4,7 @@
 __pycache__/
 
 # large files
+data
 data/
 
 # model files
