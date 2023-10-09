@@ -12,7 +12,7 @@ MODEL = 'gru'  # 'dense', 'lstm', 'gru'
 model = ''
 
 # train parameters
-epochs = 1
+epochs = 40
 batch_size = 1024
 NoD = 10 ** 6
 val_split = 0.1

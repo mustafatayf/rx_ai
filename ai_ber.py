@@ -5,9 +5,10 @@ version 0.01 (05 October 2023)
 """
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from rx_config import *
-from ber_util import gen_data, add_awgn, get_h
+from ber_util import gen_data, add_awgn, get_h, bit_checker
 from keras.models import load_model
 
 IQ = 'bpsk' # bpsk qpsk # noqa
@@ -15,7 +16,7 @@ sel = 'best'  # best, latest
 path = ''   # manuel path to models/gru_qpsk_2023... # noqa
 
 FS = 10
-TAU = 0.8
+TAU = 1.00
 SNR = [i for i in range(10+1)]
 G_DELAY = 4
 
@@ -34,7 +35,7 @@ rid = 'tau{tau}_{model}'.format(tau=TAU, model=model.name)  # TODO add unique id
 initial_seed = 2346
 nos = int(1e6)  # number of symbol to generate, send, and decode at each turn
 
-snr = 10  # for debug
+snr = 100  # for debug
 
 #
 # Message
@@ -66,7 +67,7 @@ for i in range(syms.shape[1]):
     tx_data[:, i] = np.convolve(sPSF, s_up_sampled[:, i])
 
 # Channel Modelling, add noise
-r = add_awgn(inputs=tx_data, snr=snr)
+rch = add_awgn(inputs=tx_data, snr=snr)
 
 #
 # RX side
@@ -74,15 +75,15 @@ r = add_awgn(inputs=tx_data, snr=snr)
 
 # match filter
 # mf = np.convolve(sPSF, r)
-mf = np.empty((len(r)+2*G_DELAY*FS, r.shape[1]), dtype=np.float16)
-for i in range(r.shape[1]):
-    mf[:, i] = np.convolve(sPSF, r[:, i])
+mf = np.empty((len(rch)+2*G_DELAY*FS, rch.shape[1]), dtype=np.float16)
+for i in range(rch.shape[1]):
+    mf[:, i] = np.convolve(sPSF, rch[:, i])
 
 #  Down sampling
 p_loc = 2*G_DELAY*FS  # 81 for g_delay=4 and FS = 10,
 # 4*10=40 from first conv@TX, and +40 from last conv@RX
 # remove additional prefix and suffix symbols due to CONV
-rx_data = mf[p_loc-1:-p_loc:int(TAU*FS)]
+rx_data = mf[p_loc:-p_loc:int(TAU*FS)]
 # plt.plot(np.real(mf[:250]))
 # plt.plot(np.imag(mf[:250]))
 # plt.plot(np.real(rx_data[:250]))
@@ -98,15 +99,17 @@ if 'lstm' in model.name or 'gru' in model.name:
     # padding for initial and ending values
     d = len(X_i.shape)
     assert d < 3, 'high dimensional input does not supported, only 1D or 2D'
-    if d == 1:
-        tmp_pad = np.zeros(isi)  # abs(X_i[:isi, :]*0)
-    else:
-        tmp_pad = abs(X_i[:isi, :]*0)
+    # if d == 1:
+    #     tmp_pad = np.zeros(isi)  # abs(X_i[:isi, :]*0)
+    # else:
+    #     tmp_pad = abs(X_i[:isi, :]*0)
+    # Xp = np.concatenate((tmp_pad, X_i, tmp_pad), axis=0)
+    tmp_pad = abs(X_i[:isi, :]*0)
     Xp = np.concatenate((tmp_pad, X_i, tmp_pad), axis=0)
 
     sl = list(X_i.shape)
     sl.insert(1, 2 * isi + 1)
-    ls_x = np.empty(shape=tuple(sl))
+    ls_x = np.empty(shape=tuple(sl), dtype=np.float16)
     if d == 1:
         for i in range(sl[0]):
             ls_x[i, :] = Xp[i:i + 2 * isi + 1]
@@ -119,6 +122,19 @@ if 'lstm' in model.name or 'gru' in model.name:
 else:
     X = X_i
 
+#
+# data check point
+#
+# import pandas as pd
+# cpn = 100
+# df = pd.DataFrame()
+# df['bits'] = bits[:cpn]  # message bits
+# df['tx'] = tx_data[G_DELAY*FS:(G_DELAY*FS+cpn*step):step]  # TX output to channel
+# df['rCH'] = rch[G_DELAY*FS:(G_DELAY*FS+cpn*step):step]  # channel effect (AWGN) added
+# df['mf'] = mf[p_loc:(p_loc+cpn*step):step]  # match filter applied to RAW RX data
+# df['rx_data'] = pd.DataFrame(rx_data[:cpn])  # down sampled RX after match filer
+#
+# df.plot()
 
 y_pred = model.predict(X) # noqa
 if IQ == 'bpsk':
@@ -129,7 +145,20 @@ else:
 
 y_hat = np.reshape(y_pred_bit, -1)
 
-plt.figure()
-plt.plot(y_hat[:40])
-plt.plot(bits[:40])
-plt.show()
+# debug
+# plt.figure()
+# plt.plot(bits[:40])
+# plt.plot(y_hat[:40])
+# plt.legend(['bits', 'predictions'])
+# plt.show()
+noe, nob = bit_checker(bits, y_hat)
+tBER = noe/nob
+print("BER for given turn:\t{bit} bits\t{err} error\tBER: {ber}".format(bit=nob, err=noe, ber=tBER))
+
+# DEBUG
+# SNR : 100 dB, TAU = 1
+# BER for given turn:	1000000 bits	136276 error	BER: 0.136276
+# SNR : 10 dB,  TAU = 1
+# BER for given turn:	1000000 bits	143702 error	BER: 0.143702
+# SNR : 10 dB,  TAU = 0.8
+# BER for given turn:	1000000 bits	144115 error	BER: 0.144115

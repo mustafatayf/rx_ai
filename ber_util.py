@@ -94,3 +94,21 @@ def add_awgn(inputs, snr=10):  # noqa
     # plt.show()
 
     return outputs
+
+
+def bit_checker(bit_ref, bit_tc):
+    """
+
+    :param bit_ref: reference bit
+    :param bit_tc: bits to check
+    :return: noe and nob
+    # noe : number of error
+    # nob : number of bit
+    """
+
+    assert len(bit_ref) == len(bit_tc), 'mismatch on the input lengths'
+    # noe = abs(np.subtract(bit_ref, bit_tc)).sum()
+    nob = len(bit_ref)
+    noe = nob - np.equal(bit_ref, bit_tc).sum()
+
+    return noe, nob
