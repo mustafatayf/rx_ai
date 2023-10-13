@@ -17,6 +17,9 @@ def get_data(name, rec=True, NoD=int(1e6)):  # noqa
             # demapping y+1 / 2
             y = (y + 1)//2
             # y[y==-1] = 0
+
+        # x = np.reshape(x, (-1, 1))
+        # y = np.reshape(y, (-1, 1))
         return x, y
     elif 'qpsk' in name:
         df = pd.read_csv(file_path, names=['y1', 'y2', 'x_real', 'x_imag'], header=None, nrows=NoD,
@@ -74,6 +77,46 @@ def check_data(rx_data, ref_bit, modulation='bpsk'):
         raise NotImplementedError
 
     return nof_error
+
+
+def get_song_data(x_in, y_in, L, m):
+    pad = (L-m)//2
+    # padding for initial and ending values
+    # d = len(in_data.shape)
+    # assert d < 3, 'high dimensional input does not supported, only 1D or 2D'
+    tmp_pad = abs(x_in[:pad]*0)
+    data = np.concatenate((tmp_pad, x_in, tmp_pad), axis=0)
+
+    nos = (len(data)-L)//m  # number of record/sample
+
+    x_out = np.empty(shape=(nos, L))
+    y_out = np.empty(shape=(nos, m))
+    for i in range(nos):
+        x_out[i, :] = data[i*m:(i*m + L)]
+        y_out[i, :] = 2*y_in[i*m:(i*m + m)] - 1
+
+    return x_out, y_out
+
+
+def prep_ts_data(in_data):
+    isi = 7
+    # padding for initial and ending values
+    d = len(in_data.shape)
+    assert d < 3, 'high dimensional input does not supported, only 1D or 2D'
+    tmp_pad = abs(in_data[:isi, :]*0)
+    data = np.concatenate((tmp_pad, in_data, tmp_pad), axis=0)
+
+    sl = list(in_data.shape)
+    sl.insert(1, 2 * isi + 1)
+    ts_x = np.empty(shape=tuple(sl))
+    if d == 1:
+        for i in range(sl[0]):
+            ts_x[i, :] = data[i:i + 2 * isi + 1]
+    else:
+        for i in range(sl[0]):
+            ts_x[i, :, :] = data[i:i + 2 * isi + 1, :]
+
+    return ts_x
 
 
 def show_train(history):

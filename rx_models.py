@@ -10,20 +10,26 @@ from keras.metrics import BinaryAccuracy, F1Score, Precision, Recall
 from datetime import datetime
 
 
-def dense_nn_bpsk():
+def base_bpsk(batch_size=32):
     model = Sequential()
-    model._name = 'dense_nn_bpsk'
-    model.add(Dense(4, input_shape=(1,), activation='relu'))
-    # model.add(Dense(2, activation='relu'))
-    # model.add(Dense(1, activation='tanh'))
+    model._name = 'base_nn_bpsk'
+    model.add(Dense(3, input_shape=(2,), activation='relu'))
     model.add(Dense(1, activation=tf.keras.activations.hard_sigmoid))
-    # https://www.tensorflow.org/api_docs/python/tf/keras/activations/hard_sigmoid
-    # Hard sigmoid
-    # if x < -2.5: return 0
-    # if x > 2.5: return 1
-    # if -2.5 <= x <= 2.5: return 0.2 * x + 0.5
-
     model.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics=['accuracy'])
+
+    return model
+
+
+def song_bpsk(L, m, batch_size=32):
+    model = Sequential()
+    model._name = 'song_bpsk'
+    model.add(Dense(320, input_shape=(L, ), batch_size=batch_size, activation='relu'))
+    model.add(Dense(160, activation='relu'))
+    model.add(Dense(80, activation='relu'))
+    model.add(Dense(40, activation='relu'))
+    model.add(Dense(m, activation='tanh'))
+    # model.compile(optimizer='adam', loss='mse', metrics=[BinaryAccuracy(), F1Score()])
+    model.compile(optimizer='adam', loss='mse', metrics='accuracy')
 
     return model
 
@@ -46,11 +52,6 @@ def lstm_bpsk(isi=7, batch_size=32):
     # model.add(Dense(21, activation='relu'))
     # model.add(Dense(8, activation='relu'))
     model.add(Dense(1, activation=tf.keras.activations.hard_sigmoid))
-    # https://www.tensorflow.org/api_docs/python/tf/keras/activations/hard_sigmoid
-    # Hard sigmoid
-    # if x < -2.5: return 0
-    # if x > 2.5: return 1
-    # if -2.5 <= x <= 2.5: return 0.2 * x + 0.5
 
     # model.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics=['accuracy'])
     model.compile(optimizer=tf.keras.optimizers.Nadam(),
@@ -68,21 +69,15 @@ def gru_bpsk(isi=7, batch_size=32):
     model = Sequential()
     model._name = 'gru_bpsk'
     # https://analyticsindiamag.com/lstm-vs-gru-in-recurrent-neural-network-a-comparative-study/
-    model.add(GRU(32,  input_shape=(2*isi+1, 1)))
-    model.add(Dropout(rate=0.2))
+    model.add(GRU(8,  input_shape=(2*isi+1, 1)))
+    model.add(Dropout(rate=0.3))
     # model.add(Dense(8, activation='relu'))
     model.add(Dense(1, activation=tf.keras.activations.hard_sigmoid))
-    # https://www.tensorflow.org/api_docs/python/tf/keras/activations/hard_sigmoid
-    # Hard sigmoid
-    # if x < -2.5: return 0
-    # if x > 2.5: return 1
-    # if -2.5 <= x <= 2.5: return 0.2 * x + 0.5
 
     # model.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics=['accuracy'])
     model.compile(optimizer=tf.keras.optimizers.Nadam(),
                   loss='mse',
                   metrics=[BinaryAccuracy(), F1Score()])
-
     # model.summary()
 
     return model
@@ -127,20 +122,15 @@ def dense_nn_deep():
     model.add(Dense(2, activation='relu'))
     # model.add(Dense(1, activation='tanh'))
     model.add(Dense(1, activation=tf.keras.activations.hard_sigmoid))
-    # https://www.tensorflow.org/api_docs/python/tf/keras/activations/hard_sigmoid
-    # Hard sigmoid
-    # if x < -2.5: return 0
-    # if x > 2.5: return 1
-    # if -2.5 <= x <= 2.5: return 0.2 * x + 0.5
 
     model.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics=['accuracy'])
 
     return model
 
 
-def save_mdl(model, history=None):
+def save_mdl(model, tau, history=None):
     damga = datetime.utcnow()
-    uid = model.name + '_' + damga.strftime('%Y%b%d_%H%M')
+    uid = 'tau{:.2f}_'.format(tau) + model.name + '_' + damga.strftime('%Y%b%d_%H%M')
     # model.save(''+uid)
     if not os.path.isdir('models'):
         os.mkdir('models')
