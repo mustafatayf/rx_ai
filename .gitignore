@@ -9,6 +9,13 @@ data/
 
 # data and results
 *.csv
+!ber/*.csv
+# images
+*.png
+*.jpg
+
+# old files
+old.*
 
 # model files
 models/

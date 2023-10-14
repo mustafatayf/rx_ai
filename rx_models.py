@@ -68,11 +68,10 @@ def gru_temel(isi=7, batch_size=32, init_lr=0.001):
 
     model = Sequential()
     model._name = 'gru_temel'
-    # https://analyticsindiamag.com/lstm-vs-gru-in-recurrent-neural-network-a-comparative-study/
     model.add(Input(shape=(2*isi+1, 1),
                     batch_size=batch_size)
               )
-    model.add(GRU(units=8,  # dimensionality of OUTPUT space
+    model.add(GRU(units=2*isi+1,  # dimensionality of OUTPUT space
                   activation='tanh',
                   recurrent_activation='sigmoid',
                   recurrent_dropout=0,
@@ -96,12 +95,10 @@ def gru_temel(isi=7, batch_size=32, init_lr=0.001):
     return model
 
 
-def gru_qpsk(isi=7, batch_size=32):
+def gru_plus(isi=7, batch_size=32, init_lr=0.001):
     # (n_samples, time_steps, features)
-
     model = Sequential()
-    model._name = 'gru_qpsk'
-
+    model._name = 'gru_plus'
     model.add(GRU(32,  input_shape=(2*isi+1, 2)))
     model.add(Dropout(rate=0.2))
     # model.add(Dense(8, activation='relu'))

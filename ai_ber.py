@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from constants import snr_to_nos, ref_ber_bpsk, h_81
+from constants import snr_to_nos, h_81, BERtau1, gbKSE, BCJR, TRBER
 from rx_config import init_gpu
 from rx_utils import prep_ts_data
 from ber_util import gen_data, add_awgn, get_h, bit_checker
@@ -18,14 +18,16 @@ init_gpu()
 
 IQ = 'bpsk'  # bpsk qpsk # noqa
 sel = 'best'  # best, latest
-path = 'models/tau0.80_gru_temel_B'  # manuel path to models/gru_qpsk_2023... # noqa
-# path = 'models/tau0.80_song_bpsk_2023Oct11_2139'  # manuel path to models/gru_qpsk_2023... # noqa
+# path = 'models/tau1.00_gru_temel_2023Oct14_1744'
+# path = 'models/tau0.90_gru_temel_2023Oct14_1732'
+# path = 'models/tau0.80_gru_temel_2023Oct14_1719'  # manuel path to models/gru_qpsk_2023... # noqa
+path = 'models/tau0.60_gru_temel_2023Oct14_1748'
 
 THEORY = False
 TAU_OFF = False
 
 FS = 10
-TAU = 0.80
+TAU = 0.60
 SNR = [i for i in range(20 + 1)]
 G_DELAY = 4
 
@@ -68,7 +70,7 @@ result = dict({'SNR': [], 'NoE': [], 'NoB': [], 'BER': []})
 #         NOS.append(NOS[-1])
 
 for _i_, snr in enumerate(SNR):
-    nos = snr_to_nos.get(snr, 1000000)
+    nos = snr_to_nos.get(snr, 4000000)
     # set seed value for random data
     turn_seed = initial_seed + _i_
     #
@@ -177,23 +179,34 @@ for _i_, snr in enumerate(SNR):
 # BER for given turn:	1000000 bits	144115 error	BER: 0.144115
 
 df = pd.DataFrame.from_dict(result)
-df.to_csv('ber/BER_tau{tau:.2f}_{iq}_{model}.csv'.format(tau=TAU, iq=IQ, model=model.name))
+df.to_csv('ber/BER_tau{tau:.2f}_{iq}_{model}.csv'.format(tau=TAU, iq=IQ, model=model.name), index=False)
 
 # pd.read_csv('ref_ber/no_ftn.csv')
-dref = pd.DataFrame.from_dict(ref_ber_bpsk)
+drf0 = pd.DataFrame.from_dict(TRBER)
+# drf1 = pd.DataFrame.from_dict(ref_ber_bpsk)
+drf2 = pd.DataFrame.from_dict(BCJR)
+drf3 = pd.DataFrame.from_dict(gbKSE)
+drf4 = pd.DataFrame.from_dict(BERtau1)
 
-# dref = df[['SNR', 'BER']]
-# dref = dref.rename(columns={'BER': 'tau {tau:.2f}'.format(tau=TAU)})
-
-df_comp = pd.merge(dref, df[['SNR', 'BER']], on='SNR', how='outer',
-                   suffixes=('_ref', '_tau {tau:.2f}'.format(tau=TAU))).sort_values(by='SNR')
-# dref['REF'] = dref.loc[dref['SNR'] == pd.Series(ref_ber_bpsk)[0]] = pd.Series(ref_ber_bpsk)[1]
+# combine the results
+# df_comp = df[['SNR', 'BER']]
+# df_comp = df_comp.rename(columns={'BER': 'DUT_tau_{tau:.2f}'.format(tau=TAU)})
+# df_comp = df_comp.merge(drf0, on='SNR', how='outer')
+# df_comp = drf0
+# df_comp = df_comp.merge(drf1, on='SNR', how='outer')
+# df_comp = df_comp.merge(drf2, on='SNR', how='outer')
+# df_comp = df_comp.merge(drf3, on='SNR', how='outer')
+# df_comp = df_comp.merge(drf4, on='SNR', how='outer')
+# sort by SNR
+# df_comp = df_comp.sort_values(by='SNR')
 
 fig, ax = plt.subplots()
-df_comp.plot(ax=ax, x="SNR", logy=True, marker='d')
-# df_no_ftn.plot(ax=ax, x="SNR", y="BER", logy=True, marker='d')
-# df_ftn_hd.plot(ax=ax, x="SNR", y="BER", logy=True, marker='*')
-plt.grid(visible=True, which='both', ls="-")
+# df_comp.plot(ax=ax, x="SNR", logy=True, marker='d')
+drf0.plot(ax=ax, x="SNR", logy=True, marker='v')
+drf2.plot(ax=ax, x="SNR", logy=True, marker='X', linestyle='dotted')
+drf3.plot(ax=ax, x="SNR", logy=True, marker='d', linestyle='dashed')
+drf4.plot(ax=ax, x="SNR", logy=True, marker='*', linestyle='dashdot')
+plt.grid(visible=True, which='both')
 plt.show()
 # references and resources and more
 #

@@ -16,11 +16,11 @@ from constants import h_81
 
 init_gpu()
 
-TAU = 0.80  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
-SNR = 8  # 0, 1, 2, ..., 10, nonoise  # noqa
+TAU = 0.60  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
+SNR = 10  # 0, 1, 2, ..., 10, nonoise  # noqa
 IQ = 'bpsk'  # bpsk, qpsk   #
 
-init_lr = 0.001
+init_lr = 0.0005
 model = gru_temel(init_lr=init_lr)  # 'base' 'dense', 'lstm', 'gru'  # TODO review model naming and check consistency
 
 # model = ''
@@ -30,11 +30,11 @@ model = gru_temel(init_lr=init_lr)  # 'base' 'dense', 'lstm', 'gru'  # TODO revi
 
 # train parameters
 epochs = 50
-batch_size = 10000  # reduce batch size for big models...
+batch_size = 8192  # reduce batch size for big models...
 NoS = int(1e7)  # number of symbols
 val_split = 0.1
 
-DATA_MODE = 'generate'  # 'load', 'generate'
+DATA_MODE = 'generate'  # 'load', 'generate' 'load_npy
 WB_ON = True
 
 ISI = 7  # bir sembole etki eden komşu sembol sayısı, örneğin ISI = 5; [ . . . . . S . . . . .], toplam 11 kayıt
@@ -51,6 +51,12 @@ if DATA_MODE == 'load':
         # compact data into 1D, no need to consider real(I) and imaginary(Q) parts as separate dimensions
         X_i = np.reshape(X_i, (-1, ))
 
+elif DATA_MODE == 'load_npy':
+    try:
+        X_i = np.load('data/snr{snr}_{iq}_tau{tau:.1f}_X_i.npy'.format(snr=SNR, iq=IQ, tau=TAU))
+        y_i = np.load('data/snr{snr}_{iq}_tau{tau:.1f}_y_i.npy'.format(snr=SNR, iq=IQ, tau=TAU))
+    except FileNotFoundError:
+        print('data not found try to use generate option')
 else:
     # raise NotImplementedError
     # TODO : include data generation flow
@@ -127,6 +133,7 @@ configs = dict(
     batch_size=batch_size,
     data_source=DATA_MODE,
     num_of_syms=NoS,
+    num_of_data=len(y_i),
     validation_split=val_split,
     learning_rate=init_lr,
     epochs=epochs
