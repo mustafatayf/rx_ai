@@ -21,13 +21,14 @@ sel = 'best'  # best, latest
 # path = 'models/tau1.00_gru_temel_2023Oct14_1744'
 # path = 'models/tau0.90_gru_temel_2023Oct14_1732'
 # path = 'models/tau0.80_gru_temel_2023Oct14_1719'  # manuel path to models/gru_qpsk_2023... # noqa
-path = 'models/tau0.60_gru_temel_2023Oct14_1748'
+path = 'models/tau0.70_gru_temel_2023Oct14_1833'
+# path = 'models/tau0.60_gru_temel_2023Oct14_1748'
 
 THEORY = False
 TAU_OFF = False
 
 FS = 10
-TAU = 0.60
+TAU = 0.70
 SNR = [i for i in range(20 + 1)]
 G_DELAY = 4
 
@@ -58,23 +59,14 @@ assert np.array_equal(hPSF, hPSF[::-1]), 'symmetry mismatch!'
 
 result = dict({'SNR': [], 'NoE': [], 'NoB': [], 'BER': []})
 #
-# Message
+# LOOP to BER
 #
-# snr = 100  # for debug
-# set Number of symbol for each snr run
-# NOS = []
-# for i in range(len(SNR)):
-#     if i % 3 == 0:
-#         NOS.append(min(init_nos*(10**i), int(1e+9)))
-#     else:
-#         NOS.append(NOS[-1])
-
 for _i_, snr in enumerate(SNR):
     nos = snr_to_nos.get(snr, 4000000)
     # set seed value for random data
     turn_seed = initial_seed + _i_
     #
-    # [SOURCE]  Data Generation
+    # [SOURCE]  Data Generation, Message
     #
     data, bits = gen_data(n=nos, mod=IQ, seed=43523)  # IQ options: ('bpsk', 'qpsk')
     #
@@ -180,6 +172,8 @@ for _i_, snr in enumerate(SNR):
 
 df = pd.DataFrame.from_dict(result)
 df.to_csv('ber/BER_tau{tau:.2f}_{iq}_{model}.csv'.format(tau=TAU, iq=IQ, model=model.name), index=False)
+
+print(df['BER'].values)
 
 # pd.read_csv('ref_ber/no_ftn.csv')
 drf0 = pd.DataFrame.from_dict(TRBER)

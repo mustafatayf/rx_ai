@@ -16,7 +16,7 @@ from constants import h_81
 
 init_gpu()
 
-TAU = 0.60  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
+TAU = 0.70  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
 SNR = 10  # 0, 1, 2, ..., 10, nonoise  # noqa
 IQ = 'bpsk'  # bpsk, qpsk   #
 
@@ -29,7 +29,7 @@ model = gru_temel(init_lr=init_lr)  # 'base' 'dense', 'lstm', 'gru'  # TODO revi
 # model = song_bpsk(L=L, m=m)
 
 # train parameters
-epochs = 50
+epochs = 70
 batch_size = 8192  # reduce batch size for big models...
 NoS = int(1e7)  # number of symbols
 val_split = 0.1
