@@ -1,3 +1,11 @@
+"""AI based RX
+
+RX models
+    input,  RX data (FTN + AWGN, ...)
+    output, 0/1 message  bit values
+
+last update: 12 october 2023, ..
+"""
 import os
 import pandas as pd
 from rx_config import *
