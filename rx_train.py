@@ -3,51 +3,86 @@ name: model training module
 status: draft
 version: 0.01 (05 October 2023)
 """
+import os
 import wandb
 import numpy as np
 from wandb.keras import WandbMetricsLogger, WandbModelCheckpoint
 import tensorflow as tf
-from ber_util import gen_data
+from ber_util import gen_data, add_awgn
 from rx_utils import get_data, show_train, check_data, prep_ts_data, get_song_data
-from rx_models import base_bpsk, dense_nn_qpsk, dense_nn_deep, lstm_bpsk, gru_bpsk, gru_qpsk, save_mdl, song_bpsk
+from rx_models import gru_temel, base_bpsk, dense_nn_qpsk, dense_nn_deep, lstm_bpsk, save_mdl, song_bpsk
+from rx_config import init_gpu
+from constants import h_81
+
+init_gpu()
 
 TAU = 0.80  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
 SNR = 8  # 0, 1, 2, ..., 10, nonoise  # noqa
-IQ = 'bpsk'  # bpsk, qpsk   # noqa
-nos = int(1e7)
-MODEL = 'gru'  # 'base' 'dense', 'lstm', 'gru'  # TODO review model naming and check consistency
-L = 512  # Length of symbol block/window, {(L-m)//2, m, (L-m)//2} see: song2019
-m = 32  # number of symbols to process at each inference, amount of shift see: song2019
+IQ = 'bpsk'  # bpsk, qpsk   #
 
-model = song_bpsk(L=L, m=m)
+init_lr = 0.001
+model = gru_temel(init_lr=init_lr)  # 'base' 'dense', 'lstm', 'gru'  # TODO review model naming and check consistency
+
+# model = ''
+# L = 512  # Length of symbol block/window, {(L-m)//2, m, (L-m)//2} see: song2019
+# m = 32  # number of symbols to process at each inference, amount of shift see: song2019
+# model = song_bpsk(L=L, m=m)
 
 # train parameters
-epochs = 300
-batch_size = 8000  # reduce batch size for big models...
-NoD = 1.6 * 10 ** 9
+epochs = 50
+batch_size = 10000  # reduce batch size for big models...
+NoS = int(1e7)  # number of symbols
 val_split = 0.1
 
-DATA_MODE = 'load'  # 'load', 'generate'
-WB_ON = False
+DATA_MODE = 'generate'  # 'load', 'generate'
+WB_ON = True
+
+ISI = 7  # bir sembole etki eden komşu sembol sayısı, örneğin ISI = 5; [ . . . . . S . . . . .], toplam 11 kayıt
+FS = 10
+G_DELAY = 4
+step = int(TAU * FS)
+hPSF = np.array(h_81).astype(np.float16)  # TODO G_DELAY FS based h generation
+assert np.array_equal(hPSF, hPSF[::-1]), 'symmetry mismatch!'
 
 if DATA_MODE == 'load':
     # Load the training data
-    X_i, y_i = get_data(name='data_{iq}/tau{tau:.2f}_snr{snr}_{iq}'.format(iq=IQ, tau=TAU, snr=SNR), NoD=NoD)
-else:
-    raise NotImplementedError
-    # TODO : include data generation flow
-    # syms, bits = gen_data(n=nos, mod=IQ, seed=43523) ('bpsk', 'qpsk')
-    # up-sample
-    # apply FTN  (tau)
-    # add AWGN noise (snr)
-    # apply matched filter at RX
-    # down-sample (subsample)
-    # X_i, y_i
+    X_i, y_i = get_data(name='data_{iq}/tau{tau:.2f}_snr{snr}_{iq}'.format(iq=IQ, tau=TAU, snr=SNR), NoD=NoS)
+    if IQ != 'bpsk':
+        # compact data into 1D, no need to consider real(I) and imaginary(Q) parts as separate dimensions
+        X_i = np.reshape(X_i, (-1, ))
 
-# call the model if the model is not initialized yet
-if model == '':
-    model = eval(MODEL + '_' + IQ)(batch_size=batch_size)  # TODO fix security risk // CAUTION
-    # model = gru_qpsk(batch_size=batch_size)
+else:
+    # raise NotImplementedError
+    # TODO : include data generation flow
+    assert NoS < int(1e7)+1, 'too many data to generate, load from file'
+    # [SOURCE]  Data Generation
+    data, bits = gen_data(n=NoS, mod=IQ, seed=43523)  # IQ options: ('bpsk', 'qpsk')
+    # [TX]   up-sample
+    # extend the data by up sampling (in order to be able to apply FTN)
+    s_up_sampled = np.zeros(step * len(data), dtype=np.float16)
+    s_up_sampled[::step] = data
+    # [TX]  apply FTN  (tau)
+    # apply the filter
+    tx_data = np.convolve(hPSF, s_up_sampled)
+    # [CHANNEL] add AWGN noise (snr)
+    # Channel Modelling, add noise
+    rch = add_awgn(inputs=tx_data, snr=SNR, seed=1234)
+    # [RX]   apply matched filter
+    mf = np.convolve(hPSF, rch)
+    # [RX]  down-sample (subsample)
+    # p_loc = 2 * G_DELAY * FS  # 81 for g_delay=4 and FS = 10,
+    # 4*10=40 from first conv@TX, and +40 from last conv@RX
+    # remove additional prefix and suffix symbols due to CONV
+    rx_data = mf[2 * G_DELAY * FS:-(2 * G_DELAY * FS):int(TAU * FS)]
+
+    # X_i, y_i
+    X_i = rx_data
+    y_i = bits
+
+    # if AUTO_SAVE:
+    np.save('data/snr{snr}_{iq}_tau{tau:.1f}_X_i.npy'.format(snr=SNR, iq=IQ, tau=TAU), X_i)
+    np.save('data/snr{snr}_{iq}_tau{tau:.1f}_y_i.npy'.format(snr=SNR, iq=IQ, tau=TAU), y_i)
+
 
 print(model.summary())
 confs = {
@@ -67,17 +102,17 @@ for k, v in confs.items():
 # [DEBUG] data control
 # check_data(rx_data=X_i, ref_bit=y_i, modulation=IQ)
 
-if 'song' in model.name:
-    X, y = get_song_data(X_i, y_i, L=L, m=m)
+# if 'song' in model.name:
+#     X, y = get_song_data(X_i, y_i, L=L, m=m)
+# else:
+# single to time series data
+if 'lstm' in model.name or 'gru' in model.name:
+    X = prep_ts_data(X_i, isi=ISI)
 else:
-    # single to time series data
-    if 'lstm' in model.name or 'gru' in model.name:
-        X = prep_ts_data(X_i)
-    else:
-        X = X_i
+    X = X_i
 
-    # update label type to float for evaluating performance metrics
-    y = y_i.astype(np.float16)
+# update label type to float for evaluating performance metrics
+y = y_i.astype(np.float16)
 
 # Weight and Biases integration
 # https://docs.wandb.ai/tutorials/keras_models
@@ -85,11 +120,15 @@ else:
 configs = dict(
     tau=TAU, snr=SNR,
     modulation=IQ,
-    model=MODEL,
+    model=model.name,
+    isi=ISI,
+    dropout=0.3,
+    optimizer=model.optimizer.get_config(),
     batch_size=batch_size,
-    data_size=len(y),
+    data_source=DATA_MODE,
+    num_of_syms=NoS,
     validation_split=val_split,
-    # learning_rate = 1e-3,
+    learning_rate=init_lr,
     epochs=epochs
 )
 if WB_ON:
@@ -99,8 +138,10 @@ if WB_ON:
 
     callbacks = [WandbMetricsLogger(log_freq='epoch',
                                     initial_global_step=0),
-                 WandbModelCheckpoint('models/',
-                                      save_best_only=False
+                 # WandbModelCheckpoint(filepath=os.getcwd()+'/models/tau{:.2f}_'.format(TAU) + model.name+'_{epoch:02d}',
+                 WandbModelCheckpoint(filepath='./models/tau{:.2f}_'.format(TAU) + model.name,
+                                      save_best_only=False,
+                                      # monitor='val_f1_score',
                                       )
                  ]  # WandbCallback()
 else:
@@ -117,7 +158,6 @@ history = model.fit(X, y,
 save_mdl(model, tau=TAU, history=history)
 # plot train process
 show_train(history)
-# TODO save train results
 
 if WB_ON:
     wandb.finish()

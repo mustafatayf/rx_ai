@@ -3,7 +3,7 @@ import pandas as pd
 from rx_config import *
 # from tensorflow import keras
 from keras import Sequential
-from keras.layers import Dense, LSTM, Dropout, GRU
+from keras.layers import Input, Dense, LSTM, Dropout, GRU
 from keras.models import save_model, load_model
 from keras.metrics import BinaryAccuracy, F1Score, Precision, Recall
 # from keras.optimizers import SGD, Nadam
@@ -63,19 +63,32 @@ def lstm_bpsk(isi=7, batch_size=32):
     return model
 
 
-def gru_bpsk(isi=7, batch_size=32):
+def gru_temel(isi=7, batch_size=32, init_lr=0.001):
     # (n_samples, time_steps, features)
 
     model = Sequential()
-    model._name = 'gru_bpsk'
+    model._name = 'gru_temel'
     # https://analyticsindiamag.com/lstm-vs-gru-in-recurrent-neural-network-a-comparative-study/
-    model.add(GRU(8,  input_shape=(2*isi+1, 1)))
+    model.add(Input(shape=(2*isi+1, 1),
+                    batch_size=batch_size)
+              )
+    model.add(GRU(units=8,  # dimensionality of OUTPUT space
+                  activation='tanh',
+                  recurrent_activation='sigmoid',
+                  recurrent_dropout=0,
+                  unroll=False,
+                  use_bias=True,
+                  reset_after=True,
+                  kernel_initializer='glorot_uniform',
+                  recurrent_initializer='orthogonal',
+                  bias_initializer='zeros')
+              )
     model.add(Dropout(rate=0.3))
     # model.add(Dense(8, activation='relu'))
     model.add(Dense(1, activation=tf.keras.activations.hard_sigmoid))
 
     # model.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics=['accuracy'])
-    model.compile(optimizer=tf.keras.optimizers.Nadam(),
+    model.compile(optimizer=tf.keras.optimizers.Nadam(learning_rate=init_lr),
                   loss='mse',
                   metrics=[BinaryAccuracy(), F1Score()])
     # model.summary()

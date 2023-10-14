@@ -98,12 +98,13 @@ def get_song_data(x_in, y_in, L, m):
     return x_out, y_out
 
 
-def prep_ts_data(in_data):
-    isi = 7
+def prep_ts_data(in_data, isi=7):
+
     # padding for initial and ending values
     d = len(in_data.shape)
-    assert d < 3, 'high dimensional input does not supported, only 1D or 2D'
-    tmp_pad = abs(in_data[:isi, :]*0)
+    assert d == 1, 'high dimensional input does not supported, only 1D allowed'
+    # assert d < 3, 'high dimensional input does not supported, only 1D or 2D'
+    tmp_pad = abs(in_data[:isi]*0)
     data = np.concatenate((tmp_pad, in_data, tmp_pad), axis=0)
 
     sl = list(in_data.shape)

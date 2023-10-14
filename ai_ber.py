@@ -8,17 +8,18 @@ import numpy as np
 import pandas as pd
 
 from constants import snr_to_nos, ref_ber_bpsk, h_81
-from rx_config import *
+from rx_config import init_gpu
 from rx_utils import prep_ts_data
-from ber_util import gen_data, awgn, add_awgn2, add_awgn, get_h, bit_checker
+from ber_util import gen_data, add_awgn, get_h, bit_checker
 from keras.models import load_model
+
+# initialize GPU, to avoid to waste gpu memory
+init_gpu()
 
 IQ = 'bpsk'  # bpsk qpsk # noqa
 sel = 'best'  # best, latest
-# path = 'models/tau0.50_gru_bpsk_2023Oct11_1918'   # manuel path to models/gru_qpsk_2023... # noqa
-# path = 'models/tau0.80_gru_bpsk_2023Oct11_1932'   # manuel path to models/gru_qpsk_2023... # noqa
-# path = 'models/tau0.80_gru_bpsk_2023Oct11_1939'  # manuel path to models/gru_qpsk_2023... # noqa
-path = 'models/tau0.80_song_bpsk_2023Oct11_2139'  # manuel path to models/gru_qpsk_2023... # noqa
+path = 'models/tau0.80_gru_temel_B'  # manuel path to models/gru_qpsk_2023... # noqa
+# path = 'models/tau0.80_song_bpsk_2023Oct11_2139'  # manuel path to models/gru_qpsk_2023... # noqa
 
 THEORY = False
 TAU_OFF = False
@@ -50,7 +51,8 @@ init_nos = int(1e+2)  # number of symbol to generate, send, and decode at each t
 
 # generate the filter
 # sPSF = get_h(fs=FS, g_delay=G_DELAY)
-sPSF = np.array(h_81).astype(np.float16)
+hPSF = np.array(h_81).astype(np.float16)
+assert np.array_equal(hPSF, hPSF[::-1]), 'symmetry mismatch!'
 
 result = dict({'SNR': [], 'NoE': [], 'NoB': [], 'BER': []})
 #
@@ -69,32 +71,29 @@ for _i_, snr in enumerate(SNR):
     nos = snr_to_nos.get(snr, 1000000)
     # set seed value for random data
     turn_seed = initial_seed + _i_
-    # TX Data Generation
-    syms, bits = gen_data(n=nos, mod=IQ, seed=turn_seed)
-
+    #
+    # [SOURCE]  Data Generation
+    #
+    data, bits = gen_data(n=nos, mod=IQ, seed=43523)  # IQ options: ('bpsk', 'qpsk')
     #
     # TX side
     #
     if TAU_OFF:
-        tx_data = syms
+        tx_data = data
     else:
+        #
+        # [TX]   up-sample
         # extend the data by up sampling (in order to be able to apply FTN)
-        s_up_sampled = np.zeros((step * len(syms), syms.shape[1]), dtype=np.float16)
-        for i in range(syms.shape[1]):
-            s_up_sampled[::step, i] = syms[:, i]
-
+        s_up_sampled = np.zeros(step * len(data), dtype=np.float16)
+        s_up_sampled[::step] = data
+        #
+        # [TX]  apply FTN  (tau)
         # apply the filter
-        # tx_data = np.convolve(sPSF, s_up_sampled)
-        tx_data = np.empty((len(s_up_sampled) + 2 * G_DELAY * FS, s_up_sampled.shape[1]), dtype=np.float16)
-        for i in range(syms.shape[1]):
-            tx_data[:, i] = np.convolve(sPSF, s_up_sampled[:, i])
-
+        tx_data = np.convolve(hPSF, s_up_sampled)
+    #
+    # [CHANNEL] add AWGN noise (snr)
     # Channel Modelling, add noise
-    rch = add_awgn(inputs=tx_data, snr=snr, seed=noise_seed)
-    # rch = add_awgn2(tx_data[:, 0], snr)
-    # rch = awgn(signal=tx_data, desired_snr=snr)  # , seed=noise_seed)
-    # rch = awgn(signal=tx_data, desired_snr=snr)  # , seed=noise_seed)
-    # rch = tx_data
+    rch = add_awgn(inputs=tx_data, snr=snr, seed=1234)
 
     #
     # RX side
@@ -102,27 +101,27 @@ for _i_, snr in enumerate(SNR):
     if TAU_OFF:
         rx_data = rch
     else:
-        # match filter
-        mf = np.empty((len(rch) + 2 * G_DELAY * FS, rch.shape[1]), dtype=np.float16)
-        for i in range(rch.shape[1]):
-            mf[:, i] = np.convolve(sPSF, rch[:, i])
-
-        #  Down sampling
-        p_loc = 2 * G_DELAY * FS  # 81 for g_delay=4 and FS = 10,
+        #
+        # [RX]   apply matched filter
+        mf = np.convolve(hPSF, rch)
+        #
+        # [RX]  down-sample (subsample)
+        # p_loc = 2 * G_DELAY * FS  # 81 for g_delay=4 and FS = 10,
         # 4*10=40 from first conv@TX, and +40 from last conv@RX
         # remove additional prefix and suffix symbols due to CONV
-        rx_data = mf[p_loc:-p_loc:int(TAU * FS)]
+        rx_data = mf[2 * G_DELAY * FS:-(2 * G_DELAY * FS):int(TAU * FS)]
+
         # [DEBUG]
         # plt.plot(np.real(mf[:250]))
         # plt.plot(np.imag(mf[:250]))
         # plt.plot(np.real(rx_data[:250]))
 
     # single to time series data
-    # if 'lstm' in model.name or 'gru' in model.name:
-    # X = prep_ts_data(rx_data)
-    # else:
-    #     X = rx_data
-    X, y = get_song_data_ber(X_i, y_i, L=L, m=m)
+    if 'lstm' in model.name or 'gru' in model.name:
+        X = prep_ts_data(rx_data)
+    else:
+        X = rx_data
+    # X, y = get_song_data_ber(X_i, y_i, L=L, m=m)
 
     # [DEBUG] data check point
     #
