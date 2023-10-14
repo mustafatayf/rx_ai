@@ -177,10 +177,20 @@ for _i_, snr in enumerate(SNR):
 # BER for given turn:	1000000 bits	144115 error	BER: 0.144115
 
 df = pd.DataFrame.from_dict(result)
-# df.to_csv("")
+df.to_csv('ber/BER_tau{tau:.2f}_{iq}_{model}.csv'.format(tau=TAU, iq=IQ, model=model.name))
+
+# pd.read_csv('ref_ber/no_ftn.csv')
+dref = pd.DataFrame.from_dict(ref_ber_bpsk)
+
+# dref = df[['SNR', 'BER']]
+# dref = dref.rename(columns={'BER': 'tau {tau:.2f}'.format(tau=TAU)})
+
+df_comp = pd.merge(dref, df[['SNR', 'BER']], on='SNR', how='outer',
+                   suffixes=('_ref', '_tau {tau:.2f}'.format(tau=TAU))).sort_values(by='SNR')
+# dref['REF'] = dref.loc[dref['SNR'] == pd.Series(ref_ber_bpsk)[0]] = pd.Series(ref_ber_bpsk)[1]
 
 fig, ax = plt.subplots()
-df.plot(ax=ax, x="SNR", y="BER", logy=True, marker='d')
+df_comp.plot(ax=ax, x="SNR", logy=True, marker='d')
 # df_no_ftn.plot(ax=ax, x="SNR", y="BER", logy=True, marker='d')
 # df_ftn_hd.plot(ax=ax, x="SNR", y="BER", logy=True, marker='*')
 plt.grid(visible=True, which='both', ls="-")
