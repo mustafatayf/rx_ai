@@ -11,7 +11,7 @@ import tensorflow as tf
 from wandb.keras import WandbMetricsLogger, WandbModelCheckpoint
 from ber_util import gen_data, add_awgn
 from rx_utils import get_data, show_train, check_data, prep_ts_data, get_song_data
-from ce_models import ce_temel
+from ce_models import ce_temel, ce_plus
 from rx_config import init_gpu
 from constants import h_81
 
@@ -24,7 +24,7 @@ IQ = 'bpsk'  # bpsk, qpsk   #
 
 
 init_lr = 0.001
-model = ce_temel(init_lr=init_lr)
+# model = ce_temel(init_lr=init_lr)
 
 # train parameters
 epochs = 70
@@ -46,21 +46,34 @@ if DATA_MODE == 'load':
     # Load the training data
     df = pd.read_csv('data/data_ce/rx_data_DL_Ch_Est_BPSK_Ntap3_SNR10dB_alpha03_tau1_Ks10_N256.csv',
                      header=None)
+    dfy = pd.read_csv('data/data_ce/tx_data_DL_Ch_Est_BPSK_Ntap3_SNR10dB_alpha03_tau1_Ks10_N256.csv',
+                      usecols=[32, 33, 34, 35, 36, 37], header=None)
 
     for i in range(32):
         df[i] = df[i].str.replace('i', 'j').apply(lambda x: np.complex_(x))
         # df[str(i)+'r'] = df[i].apply(lambda x: np.real(x))
         # df[str(i)+'i'] = df[i].apply(lambda x: np.imag(x))
 
-    dfr = np.real(df)
-    dfi = np.imag(df)
+    X_r = np.real(df)
+    X_i = np.imag(df)
 
-    X = np.concatenate((dfr[:, :26], dfi[:, :26]), axis=1)
-    y = np.concatenate((dfr[:, 26:], dfi[:, 26:]), axis=1)
+    y_r = np.array(dfy[[32, 34, 36]])
+    y_i = np.array(dfy[[33, 35, 37]])
+
+    # X = np.concatenate((dfr[:, :26], dfi[:, :26]), axis=1)
+    # y = np.concatenate((dfr[:, 26:], dfi[:, 26:]), axis=1)
+    # instead of keeping real/imag as single data just flat it
+    # X = np.concatenate((dfr[:, :26], dfi[:, :26]), axis=0)
+    # y = np.concatenate((dfr[:, 26:], dfi[:, 26:]), axis=0)
+
+    X = np.concatenate((X_r, X_i), axis=0).astype(np.float16)
+    y = np.concatenate((y_r, y_i), axis=0).astype(np.float16)
 
 else:
     raise NotImplementedError
 
+model = ce_temel(init_lr=init_lr)
+# model = ce_plus(init_lr=init_lr)
 
 print(model.summary())
 confs = {
@@ -79,3 +92,8 @@ history = model.fit(X, y,
                     batch_size=batch_size,
                     # callbacks=callbacks,
                     )
+show_train(history)
+
+# results = model.evaluate(x_test, y_test, batch_size=128)
+y_pred = model.predict(X[:10, :])
+y_true = y[:10, :]
