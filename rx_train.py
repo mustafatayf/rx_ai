@@ -1,9 +1,11 @@
 """AI based RX
 name: model training module
-status: draft
-version: 0.01 (05 October 2023)
+status: draft, G_delay 1 added,
+version: 0.02 (27 Jabuary 2024)
 """
 import os
+
+import pandas as pd
 import wandb
 import numpy as np
 from wandb.keras import WandbMetricsLogger, WandbModelCheckpoint
@@ -12,12 +14,12 @@ from ber_util import gen_data, add_awgn
 from rx_utils import get_data, show_train, check_data, prep_ts_data, get_song_data
 from rx_models import gru_temel, base_bpsk, dense_nn_qpsk, dense_nn_deep, lstm_bpsk, save_mdl, song_bpsk
 from rx_config import init_gpu
-from constants import h_81
+from constants import h_81, hh_21
 
 init_gpu()
 
-TAU = 0.70  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
-SNR = 10  # 0, 1, 2, ..., 10, nonoise  # noqa
+TAU = 0.60  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
+SNR = 'NoNoise'  # 0, 1, 2, ..., 10, NoNoise  # noqa
 IQ = 'bpsk'  # bpsk, qpsk   #
 
 init_lr = 0.0005
@@ -31,17 +33,23 @@ model = gru_temel(init_lr=init_lr)  # 'base' 'dense', 'lstm', 'gru'  # TODO revi
 # train parameters
 epochs = 70
 batch_size = 8192  # reduce batch size for big models...
-NoS = int(1e7)  # number of symbols
+NoS = int(1e6)  # number of symbols
 val_split = 0.1
 
 DATA_MODE = 'generate'  # 'load', 'generate' 'load_npy
 WB_ON = True
 
-ISI = 7  # bir sembole etki eden komşu sembol sayısı, örneğin ISI = 5; [ . . . . . S . . . . .], toplam 11 kayıt
+ISI = 3  # bir sembole etki eden komşu sembol sayısı, örneğin ISI = 5; [ . . . . . S . . . . .], toplam 11 kayıt
 FS = 10
-G_DELAY = 4
+G_DELAY = 1
 step = int(TAU * FS)
-hPSF = np.array(h_81).astype(np.float16)  # TODO G_DELAY FS based h generation
+if G_DELAY == 4:
+    hPSF = np.array(h_81).astype(np.float16)  # TODO G_DELAY FS based h generation
+elif G_DELAY == 1:
+    hPSF = np.array(hh_21).astype(np.float16)  # TODO G_DELAY FS based h generation
+else:
+    raise NotImplementedError
+
 assert np.array_equal(hPSF, hPSF[::-1]), 'symmetry mismatch!'
 
 if DATA_MODE == 'load':
@@ -88,6 +96,12 @@ else:
     # if AUTO_SAVE:
     np.save('data/snr{snr}_{iq}_tau{tau:.1f}_X_i.npy'.format(snr=SNR, iq=IQ, tau=TAU), X_i)
     np.save('data/snr{snr}_{iq}_tau{tau:.1f}_y_i.npy'.format(snr=SNR, iq=IQ, tau=TAU), y_i)
+
+    # save to csv
+    # import pandas as pd
+    # df = pd.DataFrame.from_dict({'y': y_i, 'X': X_i})
+    # # # df.to_csv('data/tau0.80_snrNoNoise_bpsk.csv'.format(tau=TAU, iq=IQ, model=model.name), index=False)
+    # df.to_csv('data/tau0.60_snrNoNoise_bpsk.csv', index=False)
 
 
 print(model.summary())

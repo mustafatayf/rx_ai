@@ -17,8 +17,8 @@ from rx_config import init_gpu
 # TODO: Change y data from 0 to -1
 init_gpu()
 
-TAU = 0.50  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
-SNR = 10  # 0, 1, 2, ..., 10, nonoise  # noqa
+TAU = 0.8  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
+SNR = 10  # 0, 1, 2, ..., 10, 'NoNoise'  # noqa
 IQ = 'bpsk'  # bpsk, qpsk   #
 
 NoS = int(1e7)  # number of symbols
@@ -57,12 +57,13 @@ acc = accuracy_score(y_test, y_pred)
 
 print("test accuracy {}".format(acc))
 
-# text_representation = export_text(dtree)
-# print(text_representation)
+text_representation = export_text(dtree)
+print(text_representation)
 
 # fig = plt.figure(figsize=(25, 20))
+# fig = plt.figure()
 # _ = tree.plot_tree(dtree,
-#                    feature_names=["-7", "-6", "-5", "-4", "-3", "-2", "-1", "S", "+1", "+2", "+3", "+4", "+5", "+6", "+7"],
-#                    class_names=["1", "-1"],
+#                    #feature_names=["-7", "-6", "-5", "-4", "-3", "-2", "-1", "S", "+1", "+2", "+3", "+4", "+5", "+6", "+7"],
+#                    #class_names=["1", "-1"],
 #                    filled=True)
 # plt.show()

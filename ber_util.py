@@ -130,6 +130,8 @@ def gen_data(n, mod, seed):
 #     return y_volts
 
 def add_awgn(inputs, snr=10, seed=1234):  # noqa
+    if snr == 'NoNoise':
+        return inputs
     assert len(inputs.shape) == 1 or len(inputs.shape) == 2, 'Only 1D and 2D data are supported!'
     np.random.seed(seed)
     n = len(inputs)
