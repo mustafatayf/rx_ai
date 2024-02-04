@@ -87,7 +87,7 @@ else:
     # p_loc = 2 * G_DELAY * FS  # 81 for g_delay=4 and FS = 10,
     # 4*10=40 from first conv@TX, and +40 from last conv@RX
     # remove additional prefix and suffix symbols due to CONV
-    rx_data = mf[2 * G_DELAY * FS:-(2 * G_DELAY * FS):int(TAU * FS)]
+    rx_data = mf[2 * G_DELAY * FS:-(2 * G_DELAY * FS):step]
 
     # X_i, y_i
     X_i = rx_data

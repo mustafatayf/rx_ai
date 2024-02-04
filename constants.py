@@ -15,6 +15,7 @@ snr_to_nos = {0: 1000,
               14: 3000000,
               15: 4000000,
               16: 4000000,
+              'NoNoise': 100000
               }
 
 # roll factor 0.3, gdelay 1, fs : 10 ~ for varying theta (do not use gdelay=1, it cause additional errors to data)
