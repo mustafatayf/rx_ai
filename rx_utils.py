@@ -5,10 +5,13 @@ import matplotlib.pyplot as plt
 
 def get_data(name, rec=True, NoD=int(1e6)):  # noqa
     # NoD = int(1e6)  # number of test data  # noqa
+    if NoD == -1:
+        NoD = None  # noqa
     file_path = 'data/' + name + '.csv'
     # infer data type
     if 'bpsk' in name:
-        df = pd.read_csv(file_path, names=['y', 'X'], header=None, nrows=NoD)
+        # df = pd.read_csv(file_path, names=['y', 'X'], header=None, nrows=NoD)
+        df = pd.read_csv(file_path, header=0, nrows=NoD)  # names=['y', 'X']
         x = np.array(df['X'])
         y = np.array(df['y'].astype(np.int8))
         # bpsk

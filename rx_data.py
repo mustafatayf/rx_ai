@@ -23,7 +23,6 @@ TAU = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
 # SNR  Level
 SNR = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'NoNoise']  # 'NoNoise'  0, 1, 2, ..., 10, NoNoise  # noqa
 
-# ISI = 3  # bir sembole etki eden komşu sembol sayısı, örneğin ISI = 5; [ . . . . . S . . . . .], toplam 11 kayıt
 FS = 10
 G_DELAY = 4
 if G_DELAY == 4:
@@ -32,6 +31,7 @@ elif G_DELAY == 1:
     hPSF = np.array(hh_21).astype(np.float16)  # TODO G_DELAY FS based h generation
 else:
     raise NotImplementedError
+assert np.array_equal(hPSF, hPSF[::-1]), 'symmetry mismatch!'
 
 # [SOURCE]  Data Generation
 # TODO: add other modulation type [Only bpsk supported]
