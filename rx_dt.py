@@ -1,30 +1,32 @@
 """Machine Learning based RX (Symbol Detector)
 name: Decision Tree training module
-status: draft, simple test_accuracy based ber plot initialized
-version: 0.0.2 (05 February 2024, 00:57)
+status: draft, result savings are improved
+version: 0.0.3 (12 February 2024, 13:40)
 """
+import pickle
 import pandas as pd
 import numpy as np
 from sklearn import tree
 from datetime import datetime
 from sklearn.tree import DecisionTreeClassifier, export_text
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
-from rx_utils import get_data, prep_ts_data
-from rx_config import init_gpu
+from rx_utils import get_data, prep_ts_data, mk_dir
+# from rx_config import init_gpu
 from constants import snr_to_nos, BERtau1, gbKSE, BCJR, TRBER
 
 # TODO: Add SNR value as feature
 # TODO: Change y data from 0 to -1
-init_gpu()
+# init_gpu()
 
 # Modulation Type
 IQ = 'bpsk'  # bpsk, qpsk
 # TAU Value
-TAU = [0.7, 0.8, 0.9]  # [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+TAU = [0.7, 0.9]  # [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 # SNR  Level
-SNR = [8, 9, 10, 11, 12, 13]  # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'NoNoise']
+SNR = [8, 10, 12]  # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'NoNoise']
 
 NoS = -1  # int(1e7)  # number of symbols
 
@@ -34,6 +36,7 @@ ISI = 5  # bir sembole etki eden komşu sembol sayısı, örneğin ISI = 5; [ . 
 FS = 10
 G_DELAY = 4
 
+datestr = datetime.now().strftime("%Y%m%d-%H%M%S")
 results = {}
 # TODO : add tic-toc time
 # TODO print logs to the file, result and number of test item, + time to train
@@ -57,17 +60,18 @@ for tau in TAU:
                                                             random_state=1)
 
         dtree = DecisionTreeClassifier(criterion='gini', max_depth=7, random_state=1)
+        # dtree = RandomForestClassifier(criterion='gini', max_depth=7, random_state=1)
         dtree = dtree.fit(X_train, y_train)
 
         # tree.plot_tree(dtree, feature_names=features)
         y_pred = dtree.predict(X_test)
 
         acc = accuracy_score(y_test, y_pred)
-        tauKEY = int(tau*FS)
-        if tauKEY in results.keys():
-            results[tauKEY][snr] = acc
+        # tauKEY = int(tau*FS)
+        if tau in results.keys():
+            results[tau][snr] = acc
         else:
-            results[tauKEY] = {snr: acc}
+            results[tau] = {snr: acc}
 
         print("TAU {tau}, SNR {snr}, TestData {nod}; Test accuracy : {acc}".format(tau=tau, snr=snr,
                                                                                    nod=len(X_test), acc=acc))
@@ -78,24 +82,23 @@ for tau in TAU:
         # fig = plt.figure(figsize=(25, 20))
         # fig = plt.figure()
         # _ = tree.plot_tree(dtree,
-        #                    #feature_names=["-7", "-6", "-5", "-4", "-3", "-2", "-1", "S", "+1", "+2", "+3", "+4", "+5", "+6", "+7"],
+        #                    #feature_names=[...],
         #                    #class_names=["1", "-1"],
         #                    filled=True)
         # plt.show()
 
-datestr = datetime.now().strftime("%Y%m%d-%H%M%S")
+# create the folder to store the result of the current run
+mk_dir('run/{id}/'.format(id=datestr))
 df = pd.DataFrame.from_dict(results)
-df.to_csv('ber/ACC_{iq}_{date}.csv'.format(iq=IQ, date=datestr))
+df.to_csv('run/{id}/{iq}_{date}_acc.csv'.format(id=datestr, iq=IQ, date=datestr))
 
 # TODO: add BER plot
-NOW = {'SNR': SNR,
-       'TAU_0.5': 1-np.array(list(results[5].values())),
-       'TAU_0.7': 1-np.array(list(results[7].values())),
-       'TAU_0.9': 1-np.array(list(results[9].values())),
-       }
-df_now = pd.DataFrame.from_dict(NOW)
-df_now.to_csv('ber/ACC_{iq}_{date}.csv'.format(iq=IQ, date=datestr), index=False)
+res_dict = {'SNR': np.array(SNR)}  # result dictionary for current run
+for tau in TAU:
+    res_dict['TAU_{:.1f}'.format(tau)] = np.subtract(1, np.array(list(results[tau].values()))).tolist()
 
+df_now = pd.DataFrame.from_dict(res_dict)
+df_now.to_csv('run/{id}/{iq}_{date}_pber.csv'.format(id=datestr, iq=IQ, date=datestr), index=False)
 
 drf1 = pd.DataFrame.from_dict(TRBER)
 drf2 = pd.DataFrame.from_dict(BCJR)
@@ -115,3 +118,12 @@ plt.ylabel('BER')
 plt.xlim([0, 15])
 plt.grid(visible=True, which='both')
 plt.show()
+
+# save the figure as image
+plt.savefig('run/{id}/figure.png'.format(id=datestr))
+# save the figure as object
+pickle.dump(fig, open('run/{id}/figure.pickle'.format(id=datestr), 'wb'))
+
+# to load the figure back, use
+fig = pickle.load(open('run/{id}/figure.pickle'.format(id=datestr), 'rb'))
+fig.show()

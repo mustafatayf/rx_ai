@@ -1,3 +1,10 @@
+""" Utilities for RX
+name:
+status: initial+, mkdir added
+version: 0.0.2 (12 February 2024, 13:38)
+"""
+import os
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -141,3 +148,21 @@ def show_train(history):
 
     plt.show()
     # https://matplotlib.org/stable/gallery/subplots_axes_and_figures/figure_title.html
+
+
+def mk_dir(path):
+    """
+    Automatically create directories for the specified path if any are missing,
+    Remember to add a trailing '/' backslash at the end of the input path.
+    """
+    assert path[-1] == '/', 'please add "/" at the end of path, To make sure that the input is not a file!'
+    # check existence of each sub path
+    if path[0] == '/':
+        tp = ''  # tp: temporarily path
+    else:
+        tp = '.'
+    for dr in path.split('/'):
+        tp += '/'+dr
+        if not os.path.isdir(tp):
+            os.mkdir(tp)
+

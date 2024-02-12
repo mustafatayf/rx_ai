@@ -9,6 +9,8 @@ data/
 
 # data and results
 *.csv
+run/*
+run/*.pickle
 !ber/*.csv
 # images
 *.png
