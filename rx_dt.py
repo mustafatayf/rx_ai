@@ -1,19 +1,19 @@
 """Machine Learning based RX (Symbol Detector)
 name: Decision Tree training module
-status: draft, result savings are improved
-version: 0.0.3 (12 February 2024, 13:40)
+status: draft, configurations saved to file
+version: 0.0.4 (20 February 2024, 22:18)
 """
 import pickle
 import pandas as pd
 import numpy as np
-from sklearn import tree
 from datetime import datetime
 from sklearn.tree import DecisionTreeClassifier, export_text
-from sklearn.ensemble import RandomForestClassifier
+# from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 from rx_utils import get_data, prep_ts_data, mk_dir
+from rx_features import remove_isi
 # from rx_config import init_gpu
 from constants import snr_to_nos, BERtau1, gbKSE, BCJR, TRBER
 
@@ -24,13 +24,13 @@ from constants import snr_to_nos, BERtau1, gbKSE, BCJR, TRBER
 # Modulation Type
 IQ = 'bpsk'  # bpsk, qpsk
 # TAU Value
-TAU = [0.7, 0.9]  # [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+TAU = [0.6, 0.7, 0.8, 0.9]  # [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 # SNR  Level
-SNR = [8, 10, 12]  # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'NoNoise']
+SNR = [6, 8, 10, 12]  # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'NoNoise']
 
-NoS = -1  # int(1e7)  # number of symbols
+NoS = int(1e5)  # -1  # int(1e7)  # number of symbols, -1: all
 
-ISI = 5  # bir sembole etki eden komşu sembol sayısı, örneğin ISI = 5; [ . . . . . S . . . . .], toplam 11 kayıt
+LoN = 5  # bir sembole etki eden komşu sembol sayısı, örneğin ISI = 5; [ . . . . . S . . . . .], toplam 11 kayıt
 #
 # do not change FS and G_DELAY
 FS = 10
@@ -38,6 +38,8 @@ G_DELAY = 4
 
 datestr = datetime.now().strftime("%Y%m%d-%H%M%S")
 results = {}
+config = {'Modulation': IQ, 'TAU': TAU, 'SNR': SNR, 'Number of sample': NoS if NoS != -1 else 'all',
+          'Half window length': LoN, 'Sampling Frequency': FS, 'Group Delay': G_DELAY}
 # TODO : add tic-toc time
 # TODO print logs to the file, result and number of test item, + time to train
 for tau in TAU:
@@ -49,12 +51,15 @@ for tau in TAU:
             # compact data into 1D, no need to consider real(I) and imaginary(Q) parts as separate dimensions
             X_i = np.reshape(X_i, (-1,))
 
-        X = prep_ts_data(X_i, isi=ISI)
+        X = prep_ts_data(X_i, isi=LoN)
         # update label type to float for evaluating performance metrics
         y = y_i.astype(np.float16)
 
+        # prepare the features
+        Xf = remove_isi(X, LoN=LoN, tau=tau, merge=True)
+
         # Split dataset into 80% train, 20% test
-        X_train, X_test, y_train, y_test = train_test_split(X, y,
+        X_train, X_test, y_train, y_test = train_test_split(Xf, y,
                                                             test_size=0.2,
                                                             stratify=y,
                                                             random_state=1)
@@ -89,6 +94,12 @@ for tau in TAU:
 
 # create the folder to store the result of the current run
 mk_dir('run/{id}/'.format(id=datestr))
+with open('run/{id}/configurations.xml'.format(id=datestr), 'w') as f:
+    for key, value in config.items():
+        # f.write('%s\t:\t%s\n' % (key, value))
+        # f.write('{:>25}: {:<30}{}\n'.format(str(key), str(value), 'comment'))
+        f.write('{:>25}: {:<30}\n'.format(str(key), str(value)))
+
 df = pd.DataFrame.from_dict(results)
 df.to_csv('run/{id}/{iq}_{date}_acc.csv'.format(id=datestr, iq=IQ, date=datestr))
 
@@ -100,6 +111,7 @@ for tau in TAU:
 df_now = pd.DataFrame.from_dict(res_dict)
 df_now.to_csv('run/{id}/{iq}_{date}_pber.csv'.format(id=datestr, iq=IQ, date=datestr), index=False)
 
+# TODO update the reference BER data
 drf1 = pd.DataFrame.from_dict(TRBER)
 drf2 = pd.DataFrame.from_dict(BCJR)
 drf3 = pd.DataFrame.from_dict(gbKSE)

@@ -41,7 +41,7 @@ WB_ON = True
 
 ISI = 3  # bir sembole etki eden komşu sembol sayısı, örneğin ISI = 5; [ . . . . . S . . . . .], toplam 11 kayıt
 FS = 10
-G_DELAY = 1
+G_DELAY = 4
 step = int(TAU * FS)
 if G_DELAY == 4:
     hPSF = np.array(h_81).astype(np.float16)  # TODO G_DELAY FS based h generation

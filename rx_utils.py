@@ -108,6 +108,14 @@ def get_song_data(x_in, y_in, L, m):
     return x_out, y_out
 
 
+def is_symmetric(L):
+    """
+    check if given list is symmetric or not
+    """
+    assert NotImplementedError
+    return all(i == j for i, *j in zip(L, *L))
+
+
 def prep_ts_data(in_data, isi=7):
 
     # padding for initial and ending values
