@@ -6,6 +6,9 @@ __pycache__/
 # large files
 data
 data/
+*.zip
+*.tar
+*.gz
 
 # data and results
 *.csv
