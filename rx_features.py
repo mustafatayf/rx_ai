@@ -1,8 +1,8 @@
 """ Feature Extraction and Generations
 name: ~
 desc:   obtaining features from the sequences of sampled data on the RX side
-status: draft,
-version: 0.0.1 (20 February 2024, 13:04)
+status: draft, fix major error on the ISI removal
+version: 0.0.2 (21 February 2024, 07:21)
 """
 
 import numpy as np
@@ -69,6 +69,7 @@ def remove_isi(sequence, LoN, tau, merge=False):
         # sr = np.subtract(np.array(sequence), sr)
         # isi_removed.append(sr.tolist())
         acsm = [0]*n  # accumulated sum of ISI effect
+        acsm = np.array(acsm).astype('float32')
         for i in range(n):
             #        # TODO optimize the zero multiplications
             #        # 1 2 3 4 5 6 7 8 9 10 11 12 13 14 ...  34 35 36 ... : current sequence (samples)
@@ -78,7 +79,12 @@ def remove_isi(sequence, LoN, tau, merge=False):
             #    #d    d ~ ~ ~ ~ ~ ~ ~ ~ ~ 0   0   0
             #    #...
             #    #0    0 0 0 0 0 0 ...         0   0 g f e d c b a b c d e f g 0  0
-            acsm += np.multiply(s, cf_ext[(n-i-1):(2*n-i-1)])  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
+            # acsm += np.multiply(s[i], cf_ext[(n-i-1):(2*n-i-1)])  # [0 .. 0 g f e d c b a b c d e f g 0 .. 0] 2n-1
+            if s[i] > 0:
+                acsm += np.array(cf_ext[(n-i-1):(2*n-i-1)])  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
+            else:  # s[i] <= 0
+                acsm -= np.array(cf_ext[(n-i-1):(2*n-i-1)])  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
+
         isi_removed.append(np.subtract(s, acsm))
 
     if merge:

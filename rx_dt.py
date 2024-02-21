@@ -1,7 +1,7 @@
 """Machine Learning based RX (Symbol Detector)
 name: Decision Tree training module
-status: draft, configurations saved to file
-version: 0.0.4 (20 February 2024, 22:18)
+status: draft, model parameter added
+version: 0.0.5 (21 February 2024, 07:23)
 """
 import pickle
 import pandas as pd
@@ -24,22 +24,28 @@ from constants import snr_to_nos, BERtau1, gbKSE, BCJR, TRBER
 # Modulation Type
 IQ = 'bpsk'  # bpsk, qpsk
 # TAU Value
-TAU = [0.6, 0.7, 0.8, 0.9]  # [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+TAU = [0.7, 0.8, 0.9]  # [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 # SNR  Level
 SNR = [6, 8, 10, 12]  # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'NoNoise']
 
-NoS = int(1e5)  # -1  # int(1e7)  # number of symbols, -1: all
+NoS = int(1e6)  # -1  # int(1e7)  # number of symbols, -1: all
 
-LoN = 5  # bir sembole etki eden komşu sembol sayısı, örneğin ISI = 5; [ . . . . . S . . . . .], toplam 11 kayıt
+LoN = 7  # bir sembole etki eden komşu sembol sayısı, örneğin ISI = 5; [ . . . . . S . . . . .], toplam 11 kayıt
 #
 # do not change FS and G_DELAY
 FS = 10
 G_DELAY = 4
 
+# Model parameters
+max_depth = 13
+criterion = 'gini'
+random_state = 1
+
 datestr = datetime.now().strftime("%Y%m%d-%H%M%S")
 results = {}
 config = {'Modulation': IQ, 'TAU': TAU, 'SNR': SNR, 'Number of sample': NoS if NoS != -1 else 'all',
-          'Half window length': LoN, 'Sampling Frequency': FS, 'Group Delay': G_DELAY}
+          'Half window length': LoN, 'Sampling Frequency': FS, 'Group Delay': G_DELAY,
+          'Decision Tree Max.Depth': max_depth, 'Decision Tree criterion': criterion, 'D.T. random_state': random_state}
 # TODO : add tic-toc time
 # TODO print logs to the file, result and number of test item, + time to train
 for tau in TAU:
@@ -64,7 +70,7 @@ for tau in TAU:
                                                             stratify=y,
                                                             random_state=1)
 
-        dtree = DecisionTreeClassifier(criterion='gini', max_depth=7, random_state=1)
+        dtree = DecisionTreeClassifier(criterion=criterion, max_depth=max_depth, random_state=random_state)
         # dtree = RandomForestClassifier(criterion='gini', max_depth=7, random_state=1)
         dtree = dtree.fit(X_train, y_train)
 
@@ -137,5 +143,5 @@ plt.savefig('run/{id}/figure.png'.format(id=datestr))
 pickle.dump(fig, open('run/{id}/figure.pickle'.format(id=datestr), 'wb'))
 
 # to load the figure back, use
-fig = pickle.load(open('run/{id}/figure.pickle'.format(id=datestr), 'rb'))
-fig.show()
+# fig = pickle.load(open('run/{id}/figure.pickle'.format(id=datestr), 'rb'))
+# fig.show()
