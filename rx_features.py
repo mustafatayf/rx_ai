@@ -70,7 +70,8 @@ def remove_isi(sequence, LoN, tau, merge=False):
         # isi_removed.append(sr.tolist())
         acsm = [0]*n  # accumulated sum of ISI effect
         acsm = np.array(acsm).astype('float32')
-        for i in range(n):
+        # s.append(0)
+        for i in range(n-1):
             #        # TODO optimize the zero multiplications
             #        # 1 2 3 4 5 6 7 8 9 10 11 12 13 14 ...  34 35 36 ... : current sequence (samples)
             #    #a    a ~ ~ ~ ~ ~ f g 0 0 0 0   0   0          >>> ISI coefficients
@@ -80,10 +81,11 @@ def remove_isi(sequence, LoN, tau, merge=False):
             #    #...
             #    #0    0 0 0 0 0 0 ...         0   0 g f e d c b a b c d e f g 0  0
             # acsm += np.multiply(s[i], cf_ext[(n-i-1):(2*n-i-1)])  # [0 .. 0 g f e d c b a b c d e f g 0 .. 0] 2n-1
-            if s[i] > 0:
-                acsm += np.array(cf_ext[(n-i-1):(2*n-i-1)])  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
-            else:  # s[i] <= 0
-                acsm -= np.array(cf_ext[(n-i-1):(2*n-i-1)])  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
+            df = s[i+1] - s[i]
+            # if s[i] > 0:
+            acsm += np.multiply(df, np.array(cf_ext[(n-i-1):(2*n-i-1)]))  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
+            # else:  # s[i] <= 0
+            #     acsm -= np.array(cf_ext[(n-i-1):(2*n-i-1)])  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
 
         isi_removed.append(np.subtract(s, acsm))
 
