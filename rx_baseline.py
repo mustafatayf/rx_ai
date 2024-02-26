@@ -1,8 +1,10 @@
-"""Machine Learning based RX (Symbol Detector)
-name: Decision Tree training module
+""" Symbol Detector Baseline reference
+name:
 status: draft, model parameter added
-version: 0.0.5 (21 February 2024, 07:23)
+version: 0.0.1 (26 February 2024, 22:02)
 """
+
+
 import pickle
 import pandas as pd
 import numpy as np
@@ -24,41 +26,22 @@ from constants import snr_to_nos, BERtau1, gbKSE, BCJR, TRBER
 # Modulation Type
 IQ = 'bpsk'  # bpsk, qpsk
 # TAU Value
-TAU = [0.7, 0.8, 0.9]  # [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+TAU = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 # SNR  Level
-SNR = [6, 8, 10, 12]  # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'NoNoise']
+SNR = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'NoNoise']
 
-NoS = int(1e6)  # -1  # int(1e7)  # number of symbols, -1: all
-#  2^11
+NoS = -1  # int(1e7)  # number of symbols, -1: all
 
-
-LoN = 5  # bir sembole etki eden komşu sembol sayısı, örneğin ISI = 5; [ . . . . . S . . . . .], toplam 11 kayıt
 #
 # do not change FS and G_DELAY
 FS = 10
 G_DELAY = 4
 
-# Model parameters
-max_depth = 23
-criterion = 'entropy'  # 'gini' 'entropy' 'log_loss'
-random_state = None  # 1
-test_ratio = 0.1
-splitter = 'random'  # 'best' 'random'
-min_samples = 16
-min_samples_split = min_samples  # default 2
-min_samples_leaf = min_samples
-max_features = None
-
-datestr = datetime.now().strftime("%Y%m%d-%H%M%S")
+datestr = datetime.now().strftime("base_%Y%m%d-%H%M%S")
 results = {}
 config = {'Modulation': IQ, 'TAU': TAU, 'SNR': SNR, 'Number of sample': NoS if NoS != -1 else 'all',
-          'Half window length': LoN, 'Sampling Frequency': FS, 'Group Delay': G_DELAY,
-          'Decision Tree Max.Depth': max_depth, 'Decision Tree criterion': criterion, 'D.T. random_state': random_state,
-          'DT splitter': splitter, 'DT min_samples_split': min_samples_split, 'DT min_samples_leaf': min_samples_leaf,
-          'DT max_features': max_features, 'training test_ratio': test_ratio}
+          'Sampling Frequency': FS, 'Group Delay': G_DELAY}
 
-# ## Training Phase
-# train_data = get_train_data( )
 
 ## Test/Inference Phase
 # TODO : add tic-toc time
@@ -72,35 +55,12 @@ for tau in TAU:
             # compact data into 1D, no need to consider real(I) and imaginary(Q) parts as separate dimensions
             X_i = np.reshape(X_i, (-1,))
 
-        X = prep_ts_data(X_i, isi=LoN)
-        # update label type to float for evaluating performance metrics
-        y = y_i.astype(np.float16)
-
-        # # Pre-processing
-        # prepare the features
-        Xf = remove_isi(X, LoN=LoN, tau=tau, merge=True)
-
-        # Split dataset into 80% train, 20% test
-        X_train, X_test, y_train, y_test = train_test_split(Xf, y,
-                                                            test_size=test_ratio,
-                                                            # stratify=y,
-                                                            random_state=random_state
-                                                            )
-
-        dtree = DecisionTreeClassifier(criterion=criterion,
-                                       splitter=splitter,
-                                       max_depth=max_depth,
-                                       min_samples_split=min_samples_split,
-                                       min_samples_leaf=min_samples_leaf,
-                                       max_features=max_features,
-                                       random_state=random_state)
-        # dtree = RandomForestClassifier(criterion='gini', max_depth=7, random_state=1)
-        dtree = dtree.fit(X_train, y_train)
-
         # tree.plot_tree(dtree, feature_names=features)
-        y_pred = dtree.predict(X_test)
+        number_of_sample = len(y_i)
+        number_of_correct = sum(np.equal(y_i, (X_i >= 0)*1))
+        number_of_error = number_of_sample - number_of_correct
+        acc = number_of_correct / number_of_sample
 
-        acc = accuracy_score(y_test, y_pred)
         # tauKEY = int(tau*FS)
         if tau in results.keys():
             results[tau][snr] = acc
@@ -108,7 +68,7 @@ for tau in TAU:
             results[tau] = {snr: acc}
 
         print("TAU {tau}, SNR {snr}, TestData {nod}; Test accuracy : {acc}".format(tau=tau, snr=snr,
-                                                                                   nod=len(X_test), acc=acc))
+                                                                                   nod=number_of_sample, acc=acc))
 
         # text_representation = export_text(dtree)
         # print(text_representation)
@@ -141,18 +101,8 @@ df_now = pd.DataFrame.from_dict(res_dict)
 df_now.to_csv('run/{id}/{iq}_{date}_pber.csv'.format(id=datestr, iq=IQ, date=datestr), index=False)
 
 # TODO update the reference BER data
-drf1 = pd.DataFrame.from_dict(TRBER)
-drf2 = pd.DataFrame.from_dict(BCJR)
-drf3 = pd.DataFrame.from_dict(gbKSE)
-drf4 = pd.DataFrame.from_dict(BERtau1)
-
 fig, ax = plt.subplots()
-# df_comp.plot(ax=ax, x="SNR", logy=True, marker='d')
 df_now.plot(ax=ax, x="SNR", logy=True, marker='v')
-# df_t7.plot(ax=ax, x="SNR", logy=True, marker='v', linestyle='dashdot')
-drf1.plot(ax=ax, x="SNR", logy=True, marker='X', linestyle='dotted')
-drf2.plot(ax=ax, x="SNR", logy=True, marker='d', linestyle='dashed')
-# drf4.plot(ax=ax, x="SNR", logy=True, marker='*', linestyle='dashdot')
 plt.title('DecisionTree based Symbol Detector')
 plt.xlabel('Eb/No[dB], SNR')
 plt.ylabel('BER')
