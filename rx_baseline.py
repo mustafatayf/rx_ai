@@ -81,11 +81,16 @@ df_now.to_csv('run/{id}/{iq}_{date}_pber.csv'.format(id=datestr, iq=IQ, date=dat
 
 # TODO update the reference BER data
 fig, ax = plt.subplots()
+major_ticks = np.arange(0, 19, 2)
+minor_ticks = np.arange(0, 19, 1)
+ax.set_xticks(major_ticks)
+ax.set_xticks(minor_ticks, minor=True)
+
 df_now.plot(ax=ax, x="SNR", logy=True, marker='v')
 plt.title('DecisionTree based Symbol Detector')
 plt.xlabel('Eb/No[dB], SNR')
 plt.ylabel('BER')
-plt.xlim([0, 15])
+plt.xlim([0, 18])
 plt.grid(visible=True, which='both')
 plt.show()
 
