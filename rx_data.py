@@ -1,7 +1,7 @@
 """AI based RX
 name: RX data generation module
-status: draft,
-version: 0.00 (04 February 2024)
+status: initial,
+version: 0.01 (28 February 2024)
 
 Naming:     Modulation_TAU_SNR  (fixed GroupDelay as 4, FS = 10)
 """
@@ -21,7 +21,7 @@ IQ = 'bpsk'  # bpsk, qpsk
 # TAU Value
 TAU = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]  # 0.50, 0.60, 0.70, 0.80, 0.90, 1.00
 # SNR  Level
-SNR = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'NoNoise']  # 'NoNoise'  0, 1, 2, ..., 10, NoNoise  # noqa
+SNR = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 'NoNoise']  # 'NoNoise'  0, 1, 2, ..., 10, NoNoise  # noqa
 
 FS = 10
 G_DELAY = 4
@@ -43,7 +43,7 @@ for tau in TAU:  # DEBUG [TAU[i]]
         if os.path.exists(data_filename):
             print('{file} already exist, skipping..'.format(file=data_filename))
             continue
-
+        print("generating {nod} for {name}..".format(nod=NoS, name=data_filename))
         data, bits = gen_data(n=NoS, mod=IQ, seed=43523)  # IQ options: ('bpsk', 'qpsk')
         # [TX]   up-sample
         # extend the data by up sampling (in order to be able to apply FTN)

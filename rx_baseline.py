@@ -1,34 +1,24 @@
 """ Symbol Detector Baseline reference
 name:
 status: draft, model parameter added
-version: 0.0.1 (26 February 2024, 22:02)
+version: 0.0.2 (28 February 2024, 22:02)
 """
-
 
 import pickle
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from sklearn.tree import DecisionTreeClassifier, export_text
-# from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 from rx_utils import get_data, prep_ts_data, mk_dir
-from rx_features import remove_isi
-# from rx_config import init_gpu
 from constants import snr_to_nos, BERtau1, gbKSE, BCJR, TRBER
 
-# TODO: Add SNR value as feature
-# TODO: Change y data from 0 to -1
-# init_gpu()
 
 # Modulation Type
 IQ = 'bpsk'  # bpsk, qpsk
 # TAU Value
 TAU = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 # SNR  Level
-SNR = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'NoNoise']
+SNR = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 'NoNoise']
 
 NoS = -1  # int(1e7)  # number of symbols, -1: all
 
@@ -42,8 +32,7 @@ results = {}
 config = {'Modulation': IQ, 'TAU': TAU, 'SNR': SNR, 'Number of sample': NoS if NoS != -1 else 'all',
           'Sampling Frequency': FS, 'Group Delay': G_DELAY}
 
-
-## Test/Inference Phase
+# # Test/Inference Phase
 # TODO : add tic-toc time
 # TODO print logs to the file, result and number of test item, + time to train
 for tau in TAU:
@@ -70,16 +59,6 @@ for tau in TAU:
         print("TAU {tau}, SNR {snr}, TestData {nod}; Test accuracy : {acc}".format(tau=tau, snr=snr,
                                                                                    nod=number_of_sample, acc=acc))
 
-        # text_representation = export_text(dtree)
-        # print(text_representation)
-
-        # fig = plt.figure(figsize=(25, 20))
-        # fig = plt.figure()
-        # _ = tree.plot_tree(dtree,
-        #                    #feature_names=[...],
-        #                    #class_names=["1", "-1"],
-        #                    filled=True)
-        # plt.show()
 
 # create the folder to store the result of the current run
 mk_dir('run/{id}/'.format(id=datestr))
