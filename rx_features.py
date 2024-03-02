@@ -10,7 +10,7 @@ from constants import cf0_5, cf0_6, cf0_7, cf0_8, cf0_9, cf1_0
 from rx_utils import is_symmetric
 
 
-def remove_isi(sequence, LoN, tau, merge=False):
+def remove_isi(sequence, lon, tau, merge=False):
     """
     sequence : input data, in form of [row, column] : each row corresponds to a single sample,
                 columns are the element of each sample
@@ -19,6 +19,7 @@ def remove_isi(sequence, LoN, tau, merge=False):
     merge : if True, concat the input data with the extracted features
             if False, return only the obtained features
     """
+    assert lon >=2, "minimum allowed LoN is 2!"
 
     # TODO : improve if-else structure: use direct coeffient
     if tau == 0.5:
@@ -36,6 +37,9 @@ def remove_isi(sequence, LoN, tau, merge=False):
     else:
         assert False, "invalid tau value, "  # TODO improve assert case
 
+    # diff margin threshold
+    dmt = 0.2
+
     # DEBUG sequence = [[*range(7)]]
     n = len(sequence[0])
     if len(cf) > n:
@@ -48,7 +52,8 @@ def remove_isi(sequence, LoN, tau, merge=False):
     cf_ext = cf[:0:-1] + [0] + cf[1:]
     # assert is_symmetric(cf_ext), "ISI coefficient have to be symmetric!"  # TODO
 
-    isi_removed = []
+    # isi_removed = []
+    features = []
     c = n // 2  # index of center element: symbol value index (len-1)/2
     #  -3 -2 -1 S 1 2 3  e.g. LoN: 3
     # >> : circular shift
@@ -68,10 +73,27 @@ def remove_isi(sequence, LoN, tau, merge=False):
         # sr = np.multiply(sv, cf)
         # sr = np.subtract(np.array(sequence), sr)
         # isi_removed.append(sr.tolist())
-        acsm = [0]*n  # accumulated sum of ISI effect
-        acsm = np.array(acsm).astype('float32')
+        # acsm = [0]*n  # accumulated sum of ISI effect
+        # acsm = np.array(acsm).astype('float32')
         # s.append(0)
-        for i in range(n-1):
+
+        # possibilities;    0->0,       0->1,       1->0,       1->1
+        # possibilities;    no change   increase    decrease    no change
+
+        # get 1st diff
+        df1 = s[1:] - s[:-1]
+        # get the 2nd diff
+        df2 = s[2:] - s[:-2]
+        # get the 3rd diff
+        # df3 = s[3:] - s[:-3]
+        dff1 = df1[1:] - df1[:-1]
+
+        # cf_ext
+        # features.append(np.subtract(s, dif1))
+        # features.append(np.concatenate((df1, df2, df3), axis=0))
+        features.append(np.concatenate((df1, df2, dff1), axis=0))
+
+        # for i in range(n-1):
             #        # TODO optimize the zero multiplications
             #        # 1 2 3 4 5 6 7 8 9 10 11 12 13 14 ...  34 35 36 ... : current sequence (samples)
             #    #a    a ~ ~ ~ ~ ~ f g 0 0 0 0   0   0          >>> ISI coefficients
@@ -81,15 +103,27 @@ def remove_isi(sequence, LoN, tau, merge=False):
             #    #...
             #    #0    0 0 0 0 0 0 ...         0   0 g f e d c b a b c d e f g 0  0
             # acsm += np.multiply(s[i], cf_ext[(n-i-1):(2*n-i-1)])  # [0 .. 0 g f e d c b a b c d e f g 0 .. 0] 2n-1
-            df = s[i+1] - s[i]
-            # if s[i] > 0:
-            acsm += np.multiply(df, np.array(cf_ext[(n-i-1):(2*n-i-1)]))  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
-            # else:  # s[i] <= 0
-            #     acsm -= np.array(cf_ext[(n-i-1):(2*n-i-1)])  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
+          #   df1 = s[i+1] - s[i]
+          #   df2 = s[i] - s[i-1]
+          #   df3 = s[i+2] - s[i+1]
+          #   df4 = s[i+3] - s[i+2]
+          #
+          # s[i+1] - s[i]  # adj symb ISI
+          # s[i+2] - s[i]  # 2nd adj ISI, (should have less effect) less weighted
 
-        isi_removed.append(np.subtract(s, acsm))
+            # # if s[i] > 0:
+            # acsm -= np.multiply(df, np.array(cf_ext[(n-i-1):(2*n-i-1)]))  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
+            # # else:  # s[i] <= 0
+            # #     acsm -= np.array(cf_ext[(n-i-1):(2*n-i-1)])  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
 
+        # isi_removed.append(np.subtract(s, acsm))
+
+    # fit type and dimension
+    np.array(features)
+    # features = np.expand_dims(np.array(features), axis=1)
     if merge:
-        isi_removed = [a + b for a, b in zip(isi_removed, sequence)]
-
-    return isi_removed
+        # isi_removed = [a + b for a, b in zip(isi_removed, sequence)]
+        # return [a + b for a, b in zip(sequence, features)]
+        return np.concatenate((sequence, features), axis=1)
+    else:
+        return features

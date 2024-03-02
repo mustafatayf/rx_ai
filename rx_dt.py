@@ -16,6 +16,7 @@ from rx_utils import get_data, prep_ts_data, mk_dir
 from rx_features import remove_isi
 # from rx_config import init_gpu
 from constants import snr_to_nos, BERtau1, gbKSE, BCJR, TRBER
+from matplotlib.colors import LinearSegmentedColormap
 
 # TODO: Add SNR value as feature
 # TODO: Change y data from 0 to -1
@@ -32,8 +33,9 @@ NoS = int(1e6)  # -1  # int(1e7)  # number of symbols, -1: all
 #  2^11
 
 
-LoN = 5  # bir sembole etki eden komşu sembol sayısı, örneğin ISI = 5; [ . . . . . S . . . . .], toplam 11 kayıt
-#
+LoN = 5  # number of consecutive sample considered during calculation, min 2, e.g. on 3; [. . . S . . .], total 7 sample
+
+
 # do not change FS and G_DELAY
 FS = 10
 G_DELAY = 4
@@ -60,7 +62,7 @@ config = {'Modulation': IQ, 'TAU': TAU, 'SNR': SNR, 'Number of sample': NoS if N
 # ## Training Phase
 # train_data = get_train_data( )
 
-## Test/Inference Phase
+# ## Test/Inference Phase
 # TODO : add tic-toc time
 # TODO print logs to the file, result and number of test item, + time to train
 for tau in TAU:
@@ -78,7 +80,7 @@ for tau in TAU:
 
         # # Pre-processing
         # prepare the features
-        Xf = remove_isi(X, LoN=LoN, tau=tau, merge=True)
+        Xf = remove_isi(X, lon=LoN, tau=tau, merge=False)
 
         # Split dataset into 80% train, 20% test
         X_train, X_test, y_train, y_test = train_test_split(Xf, y,
@@ -141,10 +143,16 @@ df_now = pd.DataFrame.from_dict(res_dict)
 df_now.to_csv('run/{id}/{iq}_{date}_pber.csv'.format(id=datestr, iq=IQ, date=datestr), index=False)
 
 # TODO update the reference BER data
-drf1 = pd.DataFrame.from_dict(TRBER)
+# drf1 = pd.DataFrame.from_dict(TRBER)
 drf2 = pd.DataFrame.from_dict(BCJR)
-drf3 = pd.DataFrame.from_dict(gbKSE)
-drf4 = pd.DataFrame.from_dict(BERtau1)
+# drf3 = pd.DataFrame.from_dict(gbKSE)
+# drf4 = pd.DataFrame.from_dict(BERtau1)
+
+
+# create a color list in the order of your shops
+colors = ['r', 'g', 'b']
+# create a custom color map
+lscm = LinearSegmentedColormap.from_list('color', colors)
 
 fig, ax = plt.subplots()
 major_ticks = np.arange(0, 19, 2)
@@ -153,10 +161,10 @@ ax.set_xticks(major_ticks)
 ax.set_xticks(minor_ticks, minor=True)
 
 # df_comp.plot(ax=ax, x="SNR", logy=True, marker='d')
-df_now.plot(ax=ax, x="SNR", logy=True, marker='v')
+df_now.plot(ax=ax, x="SNR", logy=True, marker='X', colormap=lscm)
 # df_t7.plot(ax=ax, x="SNR", logy=True, marker='v', linestyle='dashdot')
-drf1.plot(ax=ax, x="SNR", logy=True, marker='X', linestyle='dotted')
-drf2.plot(ax=ax, x="SNR", logy=True, marker='d', linestyle='dashed')
+# drf1.plot(ax=ax, x="SNR", logy=True, marker='X', linestyle='dotted')
+drf2.plot(ax=ax, x="SNR", logy=True, marker='*', linestyle='dashed', colormap=lscm)
 # drf4.plot(ax=ax, x="SNR", logy=True, marker='*', linestyle='dashdot')
 plt.title('DecisionTree based Symbol Detector')
 plt.xlabel('Eb/No[dB], SNR')
@@ -173,3 +181,8 @@ pickle.dump(fig, open('run/{id}/figure.pickle'.format(id=datestr), 'wb'))
 # to load the figure back, use
 # fig = pickle.load(open('run/{id}/figure.pickle'.format(id=datestr), 'rb'))
 # fig.show()
+
+
+# References/Sources
+#
+# figure line colors https://stackoverflow.com/a/61514549
