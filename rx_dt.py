@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from sklearn.tree import DecisionTreeClassifier, export_text
-# from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
@@ -50,14 +50,17 @@ min_samples = 16
 min_samples_split = min_samples  # default 2
 min_samples_leaf = min_samples
 max_features = None
+merge = True
+# reduced_set = True  # include only the important feature and sample
+n_estimators = 20
 
 datestr = datetime.now().strftime("%Y%m%d-%H%M%S")
 results = {}
 config = {'Modulation': IQ, 'TAU': TAU, 'SNR': SNR, 'Number of sample': NoS if NoS != -1 else 'all',
-          'Half window length': LoN, 'Sampling Frequency': FS, 'Group Delay': G_DELAY,
+          'Half window length': LoN, 'Sampling Frequency': FS, 'Group Delay': G_DELAY, 'merge features:': merge,
           'Decision Tree Max.Depth': max_depth, 'Decision Tree criterion': criterion, 'D.T. random_state': random_state,
           'DT splitter': splitter, 'DT min_samples_split': min_samples_split, 'DT min_samples_leaf': min_samples_leaf,
-          'DT max_features': max_features, 'training test_ratio': test_ratio}
+          'DT max_features': max_features, 'training test_ratio': test_ratio, '[RF] n_estimators': n_estimators}
 
 # ## Training Phase
 # train_data = get_train_data( )
@@ -80,7 +83,8 @@ for tau in TAU:
 
         # # Pre-processing
         # prepare the features
-        Xf = remove_isi(X, lon=LoN, tau=tau, merge=False)
+        # Xf = remove_isi(X, lon=LoN, tau=tau, merge=merge, rs=reduced_set)
+        Xf = remove_isi(X, lon=LoN, tau=tau, merge=merge)
 
         # Split dataset into 80% train, 20% test
         X_train, X_test, y_train, y_test = train_test_split(Xf, y,
@@ -89,14 +93,22 @@ for tau in TAU:
                                                             random_state=random_state
                                                             )
 
-        dtree = DecisionTreeClassifier(criterion=criterion,
-                                       splitter=splitter,
+        # dtree = DecisionTreeClassifier(criterion=criterion,
+        #                                splitter=splitter,
+        #                                max_depth=max_depth,
+        #                                min_samples_split=min_samples_split,
+        #                                min_samples_leaf=min_samples_leaf,
+        #                                max_features=max_features,
+        #                                random_state=random_state)
+
+        dtree = RandomForestClassifier(n_estimators=n_estimators,
+                                       criterion='gini',
                                        max_depth=max_depth,
                                        min_samples_split=min_samples_split,
                                        min_samples_leaf=min_samples_leaf,
                                        max_features=max_features,
-                                       random_state=random_state)
-        # dtree = RandomForestClassifier(criterion='gini', max_depth=7, random_state=1)
+                                       random_state=1)
+
         dtree = dtree.fit(X_train, y_train)
 
         # tree.plot_tree(dtree, feature_names=features)
@@ -182,6 +194,9 @@ pickle.dump(fig, open('run/{id}/figure.pickle'.format(id=datestr), 'wb'))
 # fig = pickle.load(open('run/{id}/figure.pickle'.format(id=datestr), 'rb'))
 # fig.show()
 
+# TODO add console log
+# TODO insert feature implementation
+# TODO make backup of all source code into zip file (just codes ~ KB max)
 
 # References/Sources
 #

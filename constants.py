@@ -124,6 +124,9 @@ BCJR = {'SNR': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                        0.000144175317185698, None, 5.45170065802027e-06]
         }
 
+# TODO include goBackKey reference values
+
+
 TRBER = {'SNR': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
          # 'models/tau0.50_gru_temel_2023Oct14_1540' older version of gru_temel
          'gru_tau0.5': [0.197, 0.175, 0.158, 0.1415,

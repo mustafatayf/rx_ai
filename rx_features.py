@@ -10,6 +10,7 @@ from constants import cf0_5, cf0_6, cf0_7, cf0_8, cf0_9, cf1_0
 from rx_utils import is_symmetric
 
 
+# def remove_isi(sequence, lon, tau, merge=False, rs=True):
 def remove_isi(sequence, lon, tau, merge=False):
     """
     sequence : input data, in form of [row, column] : each row corresponds to a single sample,
@@ -76,7 +77,7 @@ def remove_isi(sequence, lon, tau, merge=False):
         # acsm = [0]*n  # accumulated sum of ISI effect
         # acsm = np.array(acsm).astype('float32')
         # s.append(0)
-
+        #                           # 1,1,0,1,1
         # possibilities;    0->0,       0->1,       1->0,       1->1
         # possibilities;    no change   increase    decrease    no change
 
@@ -88,25 +89,32 @@ def remove_isi(sequence, lon, tau, merge=False):
         # a b c d e f g h i j
         # (b-a) (c-b) ...  (e-d) (f-e) :: (g-f) (h-g)... (k-j)
         df1 = s[1:] - s[:-1]
+        # if rs:
+        #     df1 = df1[lon:lon+2]
 
         # get the 2nd diff
         # c d e f g h i j k
         # a b c d e f g h i
         # ...  (e-c) (f-d) (g-e) (h-f) (i-g)...
         df2 = s[2:] - s[:-2]
-        df2 //= 2
+        # df2 //= 2  :: Do not SCALE down
+        # if rs:
+        #     df2 = df2[lon-2], df2[lon]
 
         # get the 3rd diff
         # d e f g h i j k
         # a b c d e f g h
         # (d-a) (e-b) (f-c) (g-d) (h-e) (i-f) ...
         df3 = s[3:] - s[:-3]
-        df3 //= 4
+        # df3 //= 4  :: Do not SCALE down
 
         # 2nd order dif1
         # dff1 = df1[1:] - df1[:-1]
 
         # cf_ext
+        # acsm -= np.multiply(df1, np.array(cf_ext[(n-i-1):(2*n-i-1)]))  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
+
+
         # features.append(np.subtract(s, dif1))
         features.append(np.concatenate((df1, df2, df3), axis=0))
         # features.append(np.concatenate((df1, df2, dff1), axis=0))
@@ -142,6 +150,10 @@ def remove_isi(sequence, lon, tau, merge=False):
     if merge:
         # isi_removed = [a + b for a, b in zip(isi_removed, sequence)]
         # return [a + b for a, b in zip(sequence, features)]
+        # if rs:
+        #     return np.concatenate((sequence[:, lon-1:2*lon-2], features), axis=1)
+        #     # return np.concatenate((sequence[lon-k:2*lon-k], features), axis=1)
+        # else:
         return np.concatenate((sequence, features), axis=1)
     else:
         return features
