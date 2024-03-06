@@ -19,7 +19,7 @@ def remove_isi(sequence, lon, tau, merge=False):
     merge : if True, concat the input data with the extracted features
             if False, return only the obtained features
     """
-    assert lon >=2, "minimum allowed LoN is 2!"
+    assert lon >= 2, "minimum allowed LoN is 2!"
 
     # TODO : improve if-else structure: use direct coeffient
     if tau == 0.5:
@@ -80,18 +80,36 @@ def remove_isi(sequence, lon, tau, merge=False):
         # possibilities;    0->0,       0->1,       1->0,       1->1
         # possibilities;    no change   increase    decrease    no change
 
+        # target sample : f
+        # a b c d e >> f << g h i j k
+
         # get 1st diff
+        # b c d e f g h i j k
+        # a b c d e f g h i j
+        # (b-a) (c-b) ...  (e-d) (f-e) :: (g-f) (h-g)... (k-j)
         df1 = s[1:] - s[:-1]
+
         # get the 2nd diff
+        # c d e f g h i j k
+        # a b c d e f g h i
+        # ...  (e-c) (f-d) (g-e) (h-f) (i-g)...
         df2 = s[2:] - s[:-2]
+        df2 //= 2
+
         # get the 3rd diff
-        # df3 = s[3:] - s[:-3]
-        dff1 = df1[1:] - df1[:-1]
+        # d e f g h i j k
+        # a b c d e f g h
+        # (d-a) (e-b) (f-c) (g-d) (h-e) (i-f) ...
+        df3 = s[3:] - s[:-3]
+        df3 //= 4
+
+        # 2nd order dif1
+        # dff1 = df1[1:] - df1[:-1]
 
         # cf_ext
         # features.append(np.subtract(s, dif1))
-        # features.append(np.concatenate((df1, df2, df3), axis=0))
-        features.append(np.concatenate((df1, df2, dff1), axis=0))
+        features.append(np.concatenate((df1, df2, df3), axis=0))
+        # features.append(np.concatenate((df1, df2, dff1), axis=0))
 
         # for i in range(n-1):
             #        # TODO optimize the zero multiplications

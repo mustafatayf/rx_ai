@@ -29,7 +29,7 @@ TAU = [0.7, 0.8, 0.9]  # [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 # SNR  Level
 SNR = [6, 8, 10, 12]  # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'NoNoise']
 
-NoS = int(1e6)  # -1  # int(1e7)  # number of symbols, -1: all
+NoS = int(4e5)  # -1  # int(1e7)  # number of symbols, -1: all
 #  2^11
 
 
