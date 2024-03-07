@@ -179,7 +179,7 @@ for tau in TAU:
 
         td = toc(tt1)
         print("time elapsed\t{td:.3f} seconds".format(td=td))
-        print("TAU {tau}, SNR {snr}, TestData {nod}; Test accuracy : {acc}\t{td:.5f} seconds"
+        print("TAU {tau}, SNR {snr}, TestData {nod}; Test accuracy : {acc:.7f}\t{td:.5f} seconds"
               .format(tau=tau, snr=snr, nod=len(X_test), acc=acc, td=td),
               file=f)
 
