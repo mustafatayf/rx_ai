@@ -1,7 +1,7 @@
 """Machine Learning based RX (Symbol Detector)
 name: Decision Tree training module
-status: draft, model parameter added
-version: 0.0.5 (21 February 2024, 07:23)
+status: draft, model selection added
+version: 0.0.6 (07 March 2024, 00:42)
 """
 import pickle
 import pandas as pd
@@ -41,6 +41,7 @@ FS = 10
 G_DELAY = 4
 
 # Model parameters
+model = 'DT'  # 'DT': Decision Tree (single), 'RF': Random forest
 max_depth = 23
 criterion = 'entropy'  # 'gini' 'entropy' 'log_loss'
 random_state = None  # 1
@@ -56,7 +57,7 @@ n_estimators = 20
 
 datestr = datetime.now().strftime("%Y%m%d-%H%M%S")
 results = {}
-config = {'Modulation': IQ, 'TAU': TAU, 'SNR': SNR, 'Number of sample': NoS if NoS != -1 else 'all',
+config = {'Modulation': IQ, 'TAU': TAU, 'SNR': SNR, 'Number of sample': NoS if NoS != -1 else 'all', 'model': model,
           'Half window length': LoN, 'Sampling Frequency': FS, 'Group Delay': G_DELAY, 'merge features:': merge,
           'Decision Tree Max.Depth': max_depth, 'Decision Tree criterion': criterion, 'D.T. random_state': random_state,
           'DT splitter': splitter, 'DT min_samples_split': min_samples_split, 'DT min_samples_leaf': min_samples_leaf,
@@ -67,6 +68,7 @@ config = {'Modulation': IQ, 'TAU': TAU, 'SNR': SNR, 'Number of sample': NoS if N
 
 # ## Test/Inference Phase
 # TODO : add tic-toc time
+# TODO : profile time
 # TODO print logs to the file, result and number of test item, + time to train
 for tau in TAU:
     step = int(tau * FS)
@@ -93,21 +95,24 @@ for tau in TAU:
                                                             random_state=random_state
                                                             )
 
-        # dtree = DecisionTreeClassifier(criterion=criterion,
-        #                                splitter=splitter,
-        #                                max_depth=max_depth,
-        #                                min_samples_split=min_samples_split,
-        #                                min_samples_leaf=min_samples_leaf,
-        #                                max_features=max_features,
-        #                                random_state=random_state)
-
-        dtree = RandomForestClassifier(n_estimators=n_estimators,
-                                       criterion='gini',
-                                       max_depth=max_depth,
-                                       min_samples_split=min_samples_split,
-                                       min_samples_leaf=min_samples_leaf,
-                                       max_features=max_features,
-                                       random_state=1)
+        if model == 'DT':
+            dtree = DecisionTreeClassifier(criterion=criterion,
+                                           splitter=splitter,
+                                           max_depth=max_depth,
+                                           min_samples_split=min_samples_split,
+                                           min_samples_leaf=min_samples_leaf,
+                                           max_features=max_features,
+                                           random_state=random_state)
+        elif model == 'RF':
+            dtree = RandomForestClassifier(n_estimators=n_estimators,
+                                           criterion='gini',
+                                           max_depth=max_depth,
+                                           min_samples_split=min_samples_split,
+                                           min_samples_leaf=min_samples_leaf,
+                                           max_features=max_features,
+                                           random_state=1)
+        else:
+            assert 0, "no such model! {} not found or invalid".format(model)
 
         dtree = dtree.fit(X_train, y_train)
 
