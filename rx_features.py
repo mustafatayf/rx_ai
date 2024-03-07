@@ -1,17 +1,76 @@
 """ Feature Extraction and Generations
 name: ~
 desc:   obtaining features from the sequences of sampled data on the RX side
-status: draft, fix major error on the ISI removal
-version: 0.0.2 (21 February 2024, 07:21)
+status: draft, reorganize features, GetFeature class initiated
+version: 0.0.3 (07 March 2024, 16:22)
 """
 
 import numpy as np
 from constants import cf0_5, cf0_6, cf0_7, cf0_8, cf0_9, cf1_0
-from rx_utils import is_symmetric
+# from rx_utils import is_symmetric
 
 
-# def remove_isi(sequence, lon, tau, merge=False, rs=True):
-def remove_isi(sequence, lon, tau, merge=False):
+class GetFeature:
+    """
+    possible valuable features
+    > Difference of received samples
+
+    #                           # 1,1,0,1,1
+    # possibilities;    0->0,       0->1,       1->0,       1->1
+    # possibilities;    no change   increase    decrease    no change
+
+
+    """
+    def __init__(self, lon=2):
+        assert lon >= 2, "minimum allowed LoN is 2!"
+        self.lon = lon
+
+    def s_diff(self, sequence):
+        """
+        sequence :
+
+        """
+        features = []
+        for s in sequence:
+            # get a single row of data
+            # target sample : f
+            # a b c d e >> f << g h i j k
+
+            # get 1st diff
+            # b c d e f g h i j k
+            # a b c d e f g h i j
+            # (b-a) (c-b) ...  (e-d) (f-e) :: (g-f) (h-g)... (k-j)
+            df1 = s[1:] - s[:-1]
+            # if rs:
+            #     df1 = df1[lon:lon+2]
+
+            # get the 2nd diff
+            # c d e f g h i j k
+            # a b c d e f g h i
+            # ...  (e-c) (f-d) (g-e) (h-f) (i-g)...
+            df2 = s[2:] - s[:-2]
+            # df2 //= 2  :: Do not SCALE down
+            # if rs:
+            #     df2 = df2[lon-2], df2[lon]
+
+            # get the 3rd diff
+            # d e f g h i j k
+            # a b c d e f g h
+            # (d-a) (e-b) (f-c) (g-d) (h-e) (i-f) ...
+            df3 = s[3:] - s[:-3]
+            # df3 //= 4  :: Do not SCALE down
+
+            # 2nd order dif1
+            # dff1 = df1[1:] - df1[:-1]
+
+            features.append(np.concatenate((df1, df2, df3), axis=0))
+
+        # fit type and dimension
+        np.array(features)
+        return features
+
+
+def get_feature(sequence, lon, tau, merge=False):
     """
     sequence : input data, in form of [row, column] : each row corresponds to a single sample,
                 columns are the element of each sample
@@ -22,7 +81,7 @@ def remove_isi(sequence, lon, tau, merge=False):
     """
     assert lon >= 2, "minimum allowed LoN is 2!"
 
-    # TODO : improve if-else structure: use direct coeffient
+    # TODO : improve if-else structure: use direct coefficient
     if tau == 0.5:
         cf = cf0_5  # isi coefficients
     elif tau == 0.6:
@@ -114,33 +173,32 @@ def remove_isi(sequence, lon, tau, merge=False):
         # cf_ext
         # acsm -= np.multiply(df1, np.array(cf_ext[(n-i-1):(2*n-i-1)]))  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
 
-
         # features.append(np.subtract(s, dif1))
         features.append(np.concatenate((df1, df2, df3), axis=0))
         # features.append(np.concatenate((df1, df2, dff1), axis=0))
 
         # for i in range(n-1):
-            #        # TODO optimize the zero multiplications
-            #        # 1 2 3 4 5 6 7 8 9 10 11 12 13 14 ...  34 35 36 ... : current sequence (samples)
-            #    #a    a ~ ~ ~ ~ ~ f g 0 0 0 0   0   0          >>> ISI coefficients
-            #    #b    b ~ ~ ~ ~ ~ e f g 0 0 0   0   0
-            #    #c    c ~ ~ ~ ~ ~ d e f g 0 0   0   0
-            #    #d    d ~ ~ ~ ~ ~ ~ ~ ~ ~ 0   0   0
-            #    #...
-            #    #0    0 0 0 0 0 0 ...         0   0 g f e d c b a b c d e f g 0  0
-            # acsm += np.multiply(s[i], cf_ext[(n-i-1):(2*n-i-1)])  # [0 .. 0 g f e d c b a b c d e f g 0 .. 0] 2n-1
-          #   df1 = s[i+1] - s[i]
-          #   df2 = s[i] - s[i-1]
-          #   df3 = s[i+2] - s[i+1]
-          #   df4 = s[i+3] - s[i+2]
-          #
-          # s[i+1] - s[i]  # adj symb ISI
-          # s[i+2] - s[i]  # 2nd adj ISI, (should have less effect) less weighted
+        #        # TODO optimize the zero multiplications
+        #        # 1 2 3 4 5 6 7 8 9 10 11 12 13 14 ...  34 35 36 ... : current sequence (samples)
+        #    #a    a ~ ~ ~ ~ ~ f g 0 0 0 0   0   0          >>> ISI coefficients
+        #    #b    b ~ ~ ~ ~ ~ e f g 0 0 0   0   0
+        #    #c    c ~ ~ ~ ~ ~ d e f g 0 0   0   0
+        #    #d    d ~ ~ ~ ~ ~ ~ ~ ~ ~ 0   0   0
+        #    #...
+        #    #0    0 0 0 0 0 0 ...         0   0 g f e d c b a b c d e f g 0  0
+        # acsm += np.multiply(s[i], cf_ext[(n-i-1):(2*n-i-1)])  # [0 .. 0 g f e d c b a b c d e f g 0 .. 0] 2n-1
+        #   df1 = s[i+1] - s[i]
+        #   df2 = s[i] - s[i-1]
+        #   df3 = s[i+2] - s[i+1]
+        #   df4 = s[i+3] - s[i+2]
+        #
+        # s[i+1] - s[i]  # adj symb ISI
+        # s[i+2] - s[i]  # 2nd adj ISI, (should have less effect) less weighted
 
-            # # if s[i] > 0:
-            # acsm -= np.multiply(df, np.array(cf_ext[(n-i-1):(2*n-i-1)]))  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
-            # # else:  # s[i] <= 0
-            # #     acsm -= np.array(cf_ext[(n-i-1):(2*n-i-1)])  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
+        # # if s[i] > 0:
+        # acsm -= np.multiply(df, np.array(cf_ext[(n-i-1):(2*n-i-1)]))  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
+        # # else:  # s[i] <= 0
+        # #     acsm -= np.array(cf_ext[(n-i-1):(2*n-i-1)])  # [0 ... 0 0 g f e d c b a b c d e f g 0 0 ... 0] 2n-1
 
         # isi_removed.append(np.subtract(s, acsm))
 
